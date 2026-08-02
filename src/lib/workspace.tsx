@@ -49,7 +49,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     if (!memberships.length) return;
     const stored = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
     const valid = memberships.find((m) => m.workspace_id === (wsId ?? stored));
-    const next = valid?.workspace_id ?? memberships[0].workspace_id;
+    const next = valid?.workspace_id ?? memberships[0]?.workspace_id ?? null;
     if (next !== wsId) setWsIdState(next);
   }, [memberships, wsId]);
 
