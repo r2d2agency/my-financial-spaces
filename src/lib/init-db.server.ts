@@ -4,15 +4,8 @@ export async function initializeDatabase() {
   console.log("Checking database initialization...");
   
   try {
-    // Check if a basic table exists
-    const checkFunctions = await query(`
-      SELECT COUNT(*) as count FROM pg_proc 
-      WHERE proname IN ('create_workspace', 'list_ws_members', 'has_role')
-      AND pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public');
-    `);
-
     // Force re-run for now to ensure all missing tables are created if user is stuck
-    if (true || parseInt(checkFunctions.rows[0].count) < 3) {
+    if (true) {
       console.log("Database verification/initialization running...");
       
       // SQL for full schema initialization
