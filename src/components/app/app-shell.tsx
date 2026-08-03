@@ -88,7 +88,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await qc.cancelQueries();
     qc.clear();
-    await handleLogout();
+    await localSignOut({});
+    localStorage.removeItem("auth_token");
     navigate({ to: "/auth", replace: true });
   };
 
