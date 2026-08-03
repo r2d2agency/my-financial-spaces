@@ -1,10 +1,11 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMutation, useQueryClient, useServerFn } from "@tanstack/react-query";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { Plus, Camera, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/lib/workspace";
 import { TX_TYPES, iso, num } from "@/lib/finance";
+import { processReceipt } from "@/lib/ai.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +27,8 @@ import {
 export function QuickTransaction() {
   const { wsId, canEdit } = useWorkspace();
   const qc = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const aiProcessor = useServerFn(processReceipt);
   const [open, setOpen] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
 
@@ -65,18 +68,36 @@ export function QuickTransaction() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const handlePhoto = () => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
     setIsCapturing(true);
-    // Simulating OCR/AI processing
-    setTimeout(() => {
-      setForm(f => ({
+    try {
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string);
+      });
+      reader.readAsDataURL(file);
+      const base64 = await base64Promise;
+
+      const result = await aiProcessor({ image: base64 });
+      setForm((f) => ({
         ...f,
-        description: "Compra via Foto (Processada)",
-        amount: (Math.random() * 100).toFixed(2),
+        description: result.description,
+        amount: result.amount,
       }));
+      toast.success("Comprovante processado!");
+    } catch (e: any) {
+      toast.error("Erro ao processar imagem: " + e.message);
+    } finally {
       setIsCapturing(false);
-      toast.success("Foto processada com sucesso!");
-    }, 2000);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handlePhotoClick = () => {
+    fileInputRef.current?.click();
   };
 
   if (!canEdit) return null;
@@ -97,10 +118,18 @@ export function QuickTransaction() {
           <DialogTitle>Lançamento Rápido</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+          />
           <Button 
             variant="outline" 
             className="h-24 w-full flex-col gap-2 border-dashed"
-            onClick={handlePhoto}
+            onClick={handlePhotoClick}
             disabled={isCapturing}
           >
             {isCapturing ? (
