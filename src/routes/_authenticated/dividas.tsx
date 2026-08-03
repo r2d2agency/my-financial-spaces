@@ -159,7 +159,7 @@ function Dividas() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {(debts ?? []).length === 0 && <p className="text-sm text-muted-foreground">Nenhuma dívida cadastrada.</p>}
-        {(debts ?? []).map((d) => {
+        {(debts ?? []).map((d: any) => {
           const sim = simulatePayoff(num(d.outstanding), num(d.installment_amount), num(d.interest_rate), num(extra));
           const pct = d.installments_total > 0 ? (d.installments_paid / d.installments_total) * 100 : 0;
           return (

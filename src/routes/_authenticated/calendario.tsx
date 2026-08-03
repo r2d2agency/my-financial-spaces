@@ -69,12 +69,12 @@ function Calendario() {
             ))}
           </div>
           <div className="mt-1 grid grid-cols-7 gap-1">
-            {cells.map((day, i) => {
+            {(cells as any[]).map((day, i) => {
               if (day === null) return <div key={`e${i}`} />;
               const date = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-              const items = (data ?? []).filter((t) => t.competence_date === date);
-              const inc = items.filter((t) => isIncomeType(t.type)).reduce((s, t) => s + num(t.amount), 0);
-              const out = items.filter((t) => !isIncomeType(t.type) && t.type !== "transfer").reduce((s, t) => s + num(t.amount), 0);
+              const items = ((data as any[]) ?? []).filter((t: any) => t.competence_date === date);
+              const inc = items.filter((t: any) => isIncomeType(t.type)).reduce((s: number, t: any) => s + num(t.amount), 0);
+              const out = items.filter((t: any) => !isIncomeType(t.type) && t.type !== "transfer").reduce((s: number, t: any) => s + num(t.amount), 0);
               return (
                 <div key={date} className="min-h-20 rounded-md border border-border p-1 text-left">
                   <span className="text-xs text-muted-foreground">{day}</span>

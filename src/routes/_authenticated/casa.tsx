@@ -43,15 +43,15 @@ function Casa() {
   });
 
   const cats = data?.cats ?? [];
-  const totals = cats
-    .map((c) => ({
+  const totals = (cats as any[])
+    .map((c: any) => ({
       name: c.name,
-      total: (data?.tx ?? [])
-        .filter((t) => t.category_id === c.id && t.type === "expense")
-        .reduce((s, t) => s + num(t.amount), 0),
+      total: ((data as any)?.tx ?? [])
+        .filter((t: any) => t.category_id === c.id && t.type === "expense")
+        .reduce((s: number, t: any) => s + num(t.amount), 0),
     }))
-    .sort((a, b) => b.total - a.total);
-  const grand = totals.reduce((s, t) => s + t.total, 0);
+    .sort((a: any, b: any) => b.total - a.total);
+  const grand = totals.reduce((s: number, t: any) => s + t.total, 0);
   const money = (v: number) => (hideBalances ? "•••" : brl(v));
 
   return (
@@ -76,7 +76,7 @@ function Casa() {
         </CardHeader>
         <CardContent className="space-y-4">
           {totals.length === 0 && <p className="text-sm text-muted-foreground">Sem categorias de moradia.</p>}
-          {totals.map((t) => (
+          {totals.map((t: any) => (
             <div key={t.name}>
               <div className="flex justify-between text-sm">
                 <span className="text-foreground">{t.name}</span>

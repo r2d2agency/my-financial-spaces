@@ -120,7 +120,7 @@ function Movimentacoes() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const catName = (id: string | null) => meta?.categories.find((c) => c.id === id)?.name ?? "—";
+  const catName = (id: string | null) => (meta as any)?.categories.find((c: any) => c.id === id)?.name ?? "—";
   const money = (v: number) => (hideBalances ? "•••" : brl(v));
 
   return (
@@ -188,7 +188,7 @@ function Movimentacoes() {
                       <Select value={form.account_id} onValueChange={(v) => setForm((f) => ({ ...f, account_id: v }))}>
                         <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
                         <SelectContent>
-                          {(meta?.accounts ?? []).map((a) => (
+                          {(meta as any)?.accounts.map((a: any) => (
                             <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                           ))}
                         </SelectContent>
@@ -199,7 +199,7 @@ function Movimentacoes() {
                       <Select value={form.category_id} onValueChange={(v) => setForm((f) => ({ ...f, category_id: v }))}>
                         <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
                         <SelectContent>
-                          {(meta?.categories ?? []).map((c) => (
+                          {(meta as any)?.categories.map((c: any) => (
                             <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                           ))}
                         </SelectContent>
@@ -222,7 +222,7 @@ function Movimentacoes() {
         </CardHeader>
         <CardContent className="divide-y divide-border">
           {(rows ?? []).length === 0 && <p className="py-4 text-sm text-muted-foreground">Nada por aqui neste mês.</p>}
-          {(rows ?? []).map((t) => (
+          {(rows ?? []).map((t: any) => (
             <div key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
               <div className="min-w-0">
                 <p className="truncate font-medium text-foreground">{t.description}</p>

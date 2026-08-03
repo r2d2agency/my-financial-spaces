@@ -52,7 +52,7 @@ function Planejamento() {
 
   const save = useMutation({
     mutationFn: async (p: { category_id: string; planned: number }) => {
-      const existing = (data?.budgets ?? []).find((b) => b.category_id === p.category_id);
+      const existing = ((data as any)?.budgets ?? []).find((b: any) => b.category_id === p.category_id);
       if (existing) {
         const { error } = await supabase.from("budgets").update({ planned_amount: p.planned }).eq("id", existing.id);
         if (error) throw error;
@@ -71,11 +71,11 @@ function Planejamento() {
   });
 
   const realized = (catId: string) =>
-    (data?.tx ?? []).filter((t) => t.category_id === catId && t.type === "expense").reduce((s, t) => s + num(t.amount), 0);
-  const planned = (catId: string) => num((data?.budgets ?? []).find((b) => b.category_id === catId)?.planned_amount);
+    ((data as any)?.tx ?? []).filter((t: any) => t.category_id === catId && t.type === "expense").reduce((s: number, t: any) => s + num(t.amount), 0);
+  const planned = (catId: string) => num(((data as any)?.budgets ?? []).find((b: any) => b.category_id === catId)?.planned_amount);
 
-  const totalPlan = (data?.cats ?? []).reduce((s, c) => s + planned(c.id), 0);
-  const totalReal = (data?.cats ?? []).reduce((s, c) => s + realized(c.id), 0);
+  const totalPlan = ((data as any)?.cats ?? []).reduce((s: number, c: any) => s + planned(c.id), 0);
+  const totalReal = ((data as any)?.cats ?? []).reduce((s: number, c: any) => s + realized(c.id), 0);
 
   return (
     <div className="space-y-6">
@@ -103,7 +103,7 @@ function Planejamento() {
           <CardTitle className="text-base">Por categoria</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {(data?.cats ?? []).map((c) => {
+          {(data?.cats ?? []).map((c: any) => {
             const p = planned(c.id);
             const r = realized(c.id);
             return (
