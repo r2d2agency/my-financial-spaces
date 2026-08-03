@@ -98,18 +98,23 @@ export const dbQuery = createServerFn({ method: "POST" })
     }
 
     if (data.action === "rpc") {
-      if (data.rpcName === "create_workspace") {
-        const income = parseFloat(data.rpcArgs._income) || 0;
-        const res = await query("SELECT public.create_workspace($1::text, $2::numeric, $3::uuid) as workspace_id", [
-          data.rpcArgs._name,
-          income,
-          userId
-        ]);
-        return res.rows[0].workspace_id;
-      }
-      if (data.rpcName === "list_ws_members") {
-        const res = await query("SELECT * FROM public.list_ws_members($1::uuid)", [data.rpcArgs._ws]);
-        return res.rows;
+      try {
+        if (data.rpcName === "create_workspace") {
+          const income = parseFloat(data.rpcArgs._income) || 0;
+          const res = await query("SELECT public.create_workspace($1::text, $2::numeric, $3::uuid) as workspace_id", [
+            data.rpcArgs._name,
+            income,
+            userId
+          ]);
+          return res.rows[0].workspace_id;
+        }
+        if (data.rpcName === "list_ws_members") {
+          const res = await query("SELECT * FROM public.list_ws_members($1::uuid)", [data.rpcArgs._ws]);
+          return res.rows;
+        }
+      } catch (rpcErr) {
+        console.error(`RPC Error (${data.rpcName}):`, rpcErr);
+        throw rpcErr;
       }
     }
 
