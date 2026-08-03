@@ -15,9 +15,9 @@ Copie de `.env.example`. Importante: as `VITE_*` são embutidas no build,
 então no EasyPanel marque-as também como **Build Args** (Advanced → Build Args):
 
 ```
-VITE_SUPABASE_URL
-VITE_SUPABASE_PUBLISHABLE_KEY
-VITE_SUPABASE_PROJECT_ID
+VITE_SUPABASE_URL=http://IP-DO-EASYPANEL:8000
+VITE_SUPABASE_PUBLISHABLE_KEY=sua-anon-key
+VITE_SUPABASE_PROJECT_ID=seu-id
 ```
 
 E como env de runtime:
@@ -26,10 +26,13 @@ E como env de runtime:
 NODE_ENV=production
 HOST=0.0.0.0
 PORT=3000
-SUPABASE_URL
-SUPABASE_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY
+SUPABASE_URL=http://IP-DO-EASYPANEL:8000
+SUPABASE_ANON_KEY=sua-anon-key
+SUPABASE_SERVICE_ROLE_KEY=sua-service-role-key
+DATABASE_URL=postgresql://postgres:senha@IP-DO-EASYPANEL:5432/postgres
 ```
+
+> **Nota sobre PostgreSQL:** Se estiver usando o template Supabase no EasyPanel, o `VITE_SUPABASE_URL` e `SUPABASE_URL` devem apontar para a porta da API do Kong (geralmente `8000`). O `DATABASE_URL` aponta direto para o banco (porta `5432`).
 
 ## 3. Banco de dados
 Duas opções:
