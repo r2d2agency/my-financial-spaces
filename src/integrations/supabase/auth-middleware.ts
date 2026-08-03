@@ -31,10 +31,12 @@ export const requireAuth = createMiddleware({ type: 'function' }).server(
       context: {
         userId: session.user_id,
         sessionId: session.id,
+        supabase: {}, // Objeto vazio para compatibilidade de tipos
       },
     });
   },
 );
+
 
 // Alias para compatibilidade com código existente
 export const requireSupabaseAuth = requireAuth;
