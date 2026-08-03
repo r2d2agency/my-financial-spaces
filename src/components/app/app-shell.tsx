@@ -72,11 +72,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     },
   });
 
-  const unread = (notifications ?? []).filter((n) => !n.read_at).length;
+  const unread = (notifications ?? []).filter((n: any) => !n.read_at).length;
 
   const markRead = useMutation({
     mutationFn: async () => {
-      const ids = (notifications ?? []).filter((n) => !n.read_at).map((n) => n.id);
+      const ids = (notifications ?? []).filter((n: any) => !n.read_at).map((n: any) => n.id);
       if (!ids.length) return;
       await supabase.from("notifications").update({ read_at: new Date().toISOString() }).in("id", ids);
     },
@@ -108,7 +108,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {(notifications ?? []).length === 0 && (
             <p className="p-3 text-sm text-muted-foreground">Nenhuma notificação por aqui.</p>
           )}
-          {(notifications ?? []).map((n) => (
+          {(notifications ?? []).map((n: any) => (
             <div key={n.id} className="p-3">
               <p className="text-sm font-medium">{n.title}</p>
               {n.body && <p className="text-xs text-muted-foreground">{n.body}</p>}

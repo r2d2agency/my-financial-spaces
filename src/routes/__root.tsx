@@ -136,7 +136,7 @@ function RootComponent() {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
-    });
+    }) || { data: { subscription: { unsubscribe: () => {} } } }) as any;
     return () => data?.subscription?.unsubscribe?.();
   }, [router, queryClient]);
 

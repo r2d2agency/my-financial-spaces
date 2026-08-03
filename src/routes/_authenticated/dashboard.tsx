@@ -81,21 +81,21 @@ function Dashboard() {
   }
 
   const tx = data?.tx ?? [];
-  const income = tx.filter((t) => isIncomeType(t.type)).reduce((s, t) => s + num(t.amount), 0);
-  const expense = tx.filter((t) => !isIncomeType(t.type) && t.type !== "transfer").reduce((s, t) => s + num(t.amount), 0);
-  const pending = tx.filter((t) => t.status === "pending" && !isIncomeType(t.type)).reduce((s, t) => s + num(t.amount), 0);
-  const balance = (data?.accounts ?? []).reduce((s, a) => s + num(a.initial_balance), 0) + income - expense;
-  const debtTotal = (data?.debts ?? []).reduce((s, d) => s + num(d.outstanding), 0);
+  const income = tx.filter((t: any) => isIncomeType(t.type)).reduce((s: number, t: any) => s + num(t.amount), 0);
+  const expense = tx.filter((t: any) => !isIncomeType(t.type) && t.type !== "transfer").reduce((s: number, t: any) => s + num(t.amount), 0);
+  const pending = tx.filter((t: any) => t.status === "pending" && !isIncomeType(t.type)).reduce((s: number, t: any) => s + num(t.amount), 0);
+  const balance = (data?.accounts ?? []).reduce((s: number, a: any) => s + num(a.initial_balance), 0) + income - expense;
+  const debtTotal = (data?.debts ?? []).reduce((s: number, d: any) => s + num(d.outstanding), 0);
 
   const byDay = Object.values(
-    tx.reduce<Record<string, { dia: string; receitas: number; despesas: number }>>((acc, t) => {
+    tx.reduce<Record<string, { dia: string; receitas: number; despesas: number }>>((acc: any, t: any) => {
       const key = t.competence_date;
       acc[key] ??= { dia: key.slice(8, 10), receitas: 0, despesas: 0 };
       if (isIncomeType(t.type)) acc[key].receitas += num(t.amount);
       else if (t.type !== "transfer") acc[key].despesas += num(t.amount);
       return acc;
     }, {}),
-  ).sort((a, b) => a.dia.localeCompare(b.dia));
+  ).sort((a: any, b: any) => a.dia.localeCompare(b.dia));
 
   const money = (v: number) => (hideBalances ? "•••••" : brl(v));
 
@@ -156,7 +156,7 @@ function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p className="text-2xl font-semibold text-foreground">{money(debtTotal)}</p>
-            {(data?.debts ?? []).slice(0, 4).map((d) => (
+            {(data?.debts ?? []).slice(0, 4).map((d: any) => (
               <div key={d.id} className="flex justify-between text-muted-foreground">
                 <span>{d.name}</span>
                 <span>{money(num(d.outstanding))}</span>
@@ -174,7 +174,7 @@ function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
             {(data?.cards ?? []).length === 0 && <p>Nenhum cartão cadastrado.</p>}
-            {(data?.cards ?? []).map((c) => (
+            {(data?.cards ?? []).map((c: any) => (
               <div key={c.id} className="flex justify-between">
                 <span>{c.name}</span>
                 <span>{money(num(c.credit_limit))}</span>
@@ -192,7 +192,7 @@ function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {(data?.goals ?? []).length === 0 && <p className="text-muted-foreground">Nenhuma meta cadastrada.</p>}
-            {(data?.goals ?? []).map((g) => {
+            {(data?.goals ?? []).map((g: any) => {
               const pct = num(g.target_amount) > 0 ? (num(g.current_amount) / num(g.target_amount)) * 100 : 0;
               return (
                 <div key={g.id}>
