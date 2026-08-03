@@ -1,9 +1,11 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/lib/workspace";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -23,6 +25,8 @@ import {
   Settings,
   LogOut,
   Wallet,
+  Bell,
+  ShieldCheck,
 } from "lucide-react";
 
 const nav = [
@@ -43,12 +47,79 @@ export function AppShell({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
+  const { data: isPlatformAdmin } = useQuery({
+    queryKey: ["is-platform-admin"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("role", "platform_admin")
+        .maybeSingle();
+      return !!data;
+    },
+  });
+
+  const { data: notifications } = useQuery({
+    queryKey: ["notifications"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("notifications")
+        .select("id, title, body, read_at, created_at")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      return data ?? [];
+    },
+  });
+
+  const unread = (notifications ?? []).filter((n) => !n.read_at).length;
+
+  const markRead = useMutation({
+    mutationFn: async () => {
+      const ids = (notifications ?? []).filter((n) => !n.read_at).map((n) => n.id);
+      if (!ids.length) return;
+      await supabase.from("notifications").update({ read_at: new Date().toISOString() }).in("id", ids);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+
   const signOut = async () => {
     await qc.cancelQueries();
     qc.clear();
     await supabase.auth.signOut();
     navigate({ to: "/auth", replace: true });
   };
+
+  const bell = (
+    <Popover onOpenChange={(open) => open && unread > 0 && markRead.mutate()}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="relative">
+          <Bell className="size-4" />
+          {unread > 0 && (
+            <Badge className="absolute -right-1 -top-1 h-4 min-w-4 justify-center px-1 text-[10px]">
+              {unread}
+            </Badge>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 p-0">
+        <p className="border-b border-border px-3 py-2 text-sm font-medium">Notificações</p>
+        <div className="max-h-72 divide-y overflow-y-auto">
+          {(notifications ?? []).length === 0 && (
+            <p className="p-3 text-sm text-muted-foreground">Nenhuma notificação por aqui.</p>
+          )}
+          {(notifications ?? []).map((n) => (
+            <div key={n.id} className="p-3">
+              <p className="text-sm font-medium">{n.title}</p>
+              {n.body && <p className="text-xs text-muted-foreground">{n.body}</p>}
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {new Date(n.created_at).toLocaleString("pt-BR")}
+              </p>
+            </div>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 
   return (
     <div className="flex min-h-screen bg-muted/20">
@@ -96,20 +167,37 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+          {isPlatformAdmin && (
+            <Link
+              to="/admin"
+              className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
+                pathname.startsWith("/admin")
+                  ? "bg-primary/10 font-medium text-primary"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+              }`}
+            >
+              <ShieldCheck className="size-4" />
+              Administração
+            </Link>
+          )}
         </nav>
-        <div className="border-t border-border p-2">
-          <Button variant="ghost" className="w-full justify-start" onClick={signOut}>
+        <div className="flex items-center justify-between border-t border-border p-2">
+          <Button variant="ghost" className="justify-start" onClick={signOut}>
             <LogOut className="mr-2 size-4" /> Sair
           </Button>
+          {bell}
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 items-center justify-between gap-3 border-b border-border bg-background px-4 lg:hidden">
           <span className="font-semibold">Espaço Financeiro</span>
-          <Button size="sm" variant="ghost" onClick={signOut}>
-            <LogOut className="size-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            {bell}
+            <Button size="sm" variant="ghost" onClick={signOut}>
+              <LogOut className="size-4" />
+            </Button>
+          </div>
         </header>
         <div className="flex gap-1 overflow-x-auto border-b border-border bg-background px-2 py-2 lg:hidden">
           {nav.map((n) => (
@@ -121,6 +209,14 @@ export function AppShell({ children }: { children: ReactNode }) {
               {n.label}
             </Link>
           ))}
+          {isPlatformAdmin && (
+            <Link
+              to="/admin"
+              className="whitespace-nowrap rounded-md px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent"
+            >
+              Administração
+            </Link>
+          )}
         </div>
         <main className="min-w-0 flex-1 p-4 sm:p-6">{children}</main>
       </div>
