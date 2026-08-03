@@ -8,11 +8,17 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { createServerFn } from "@tanstack/react-start";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
-import { supabase } from "@/integrations/supabase/client";
+
+const initDb = createServerFn({ method: "GET" }).handler(async () => {
+  const { initializeDatabase } = await import("@/lib/init-db.server");
+  await initializeDatabase();
+  return { success: true };
+});
 
 function NotFoundComponent() {
   return (
@@ -130,6 +136,11 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+
+  useEffect(() => {
+    // Run DB initialization on boot (server-side logic inside the function)
+    initDb();
+  }, []);
 
   useEffect(() => {
     // Listener simplificado para auth local: apenas invalida se o token sumir/mudar
