@@ -7,9 +7,9 @@ export async function initializeDatabase() {
     // Check if a basic table exists
     const checkTable = await query(`
       SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'plans'
+        SELECT FROM pg_proc 
+        WHERE proname = 'create_workspace' 
+        AND pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')
       );
     `);
 
