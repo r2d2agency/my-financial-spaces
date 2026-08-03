@@ -6,11 +6,11 @@ export async function initializeDatabase() {
   try {
     // Check if a basic table exists
     const checkTable = await query(`
-      SELECT EXISTS (
-        SELECT FROM pg_proc 
-        WHERE proname = 'create_workspace' 
+      SELECT (
+        SELECT COUNT(*) FROM pg_proc 
+        WHERE proname IN ('create_workspace', 'list_ws_members', 'has_role')
         AND pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')
-      );
+      ) = 3 as exists;
     `);
 
     if (!checkTable.rows[0].exists) {
