@@ -15,7 +15,8 @@ export async function initializeDatabase() {
       console.log("Database not initialized. Running migrations...");
       
       // SQL for full schema initialization
-      // Note: Running these in a single call. In some PG drivers this is fine, in others we might need to split.
+      // Note: We run these separately or handle errors if the driver doesn't support multiple statements well.
+      // But we will use the same string for now, ensuring syntax is perfect.
       const sql = `
         -- 1. ESTRUTURA AUTH
         CREATE SCHEMA IF NOT EXISTS auth;
@@ -200,8 +201,11 @@ export async function initializeDatabase() {
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
           name TEXT NOT NULL,
+          initial_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
           outstanding NUMERIC(14,2) NOT NULL DEFAULT 0,
           installment_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+          installments_total INTEGER NOT NULL DEFAULT 1,
+          due_day INTEGER NOT NULL DEFAULT 10,
           status public.debt_status NOT NULL DEFAULT 'active',
           created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
@@ -212,6 +216,28 @@ export async function initializeDatabase() {
           name TEXT NOT NULL,
           target_amount NUMERIC(14,2) NOT NULL,
           current_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS public.recurring_transactions (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+          type public.tx_type NOT NULL DEFAULT 'expense',
+          description TEXT NOT NULL,
+          amount NUMERIC(14,2) NOT NULL,
+          frequency TEXT NOT NULL DEFAULT 'monthly',
+          day_of_month INTEGER NOT NULL DEFAULT 5,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS public.workspace_invites (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+          email TEXT NOT NULL,
+          role public.workspace_role NOT NULL DEFAULT 'viewer',
+          hide_balances BOOLEAN NOT NULL DEFAULT false,
+          invited_by UUID,
+          status public.invite_status NOT NULL DEFAULT 'pending',
           created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
 
