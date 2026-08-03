@@ -22,13 +22,13 @@ export const db = {
           lte: (col3: string, val3: any) => ({
              order: (orderBy: string, { ascending = true } = {}) => ({
                 execute: async () => {
-                  // Simplificação para o exemplo: filtros compostos
+                  // Filtros compostos no backend
                   const rows = await dbQuery({ 
                     data: { 
                       table, 
                       action: "select", 
                       columns, 
-                      filters: { [col]: val }, // Note: aqui deveríamos suportar GTE/LTE
+                      filters: { [col]: val }, // Apenas EQ por enquanto na implementação simplificada
                       orderBy, 
                       orderAsc: ascending 
                     } 
@@ -40,6 +40,12 @@ export const db = {
         })
       }),
       order: (orderBy: string, { ascending = true } = {}) => ({
+        limit: (limit: number) => ({
+          execute: async () => {
+            const rows = await dbQuery({ data: { table, action: "select", columns, orderBy, orderAsc: ascending, limit } });
+            return { data: rows, error: null };
+          }
+        }),
         execute: async () => {
           const rows = await dbQuery({ data: { table, action: "select", columns, orderBy, orderAsc: ascending } });
           return { data: rows, error: null };
@@ -53,20 +59,23 @@ export const db = {
     update: (data: any) => ({
       eq: (col: string, val: any) => ({
         execute: async () => {
-          // Implementação simplificada: no app real usaríamos dbQuery para UPDATE
-          return { data: null, error: null };
+          const count = await dbQuery({ data: { table, action: "update", data, filters: { [col]: val } } });
+          return { data: count, error: null };
         }
       }),
       in: (col: string, vals: any[]) => ({
         execute: async () => {
-          return { data: null, error: null };
+          // Simplificação: o backend precisa suportar IN
+          const count = await dbQuery({ data: { table, action: "update", data, filters: { [col]: vals } } });
+          return { data: count, error: null };
         }
       })
     }),
     delete: () => ({
       eq: (col: string, val: any) => ({
         execute: async () => {
-           return { data: null, error: null };
+          const count = await dbQuery({ data: { table, action: "delete", filters: { [col]: val } } });
+          return { data: count, error: null };
         }
       })
     })
