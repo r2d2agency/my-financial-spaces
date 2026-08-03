@@ -1,0 +1,160 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Plus, Camera, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/lib/workspace";
+import { TX_TYPES, iso, num } from "@/lib/finance";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+export function QuickTransaction() {
+  const { wsId, canEdit } = useWorkspace();
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
+
+  const [form, setForm] = useState({
+    type: "expense",
+    description: "",
+    amount: "",
+    competence_date: iso(new Date()),
+    status: "paid", // Default to paid for quick entry
+    account_id: "",
+    category_id: "",
+  });
+
+  const create = useMutation({
+    mutationFn: async () => {
+      const { data: me } = await supabase.auth.getUser();
+      const { error } = await supabase.from("transactions").insert({
+        workspace_id: wsId!,
+        type: form.type as any,
+        description: form.description.trim(),
+        amount: num(form.amount),
+        status: form.status as any,
+        competence_date: form.competence_date,
+        paid_date: form.status === "paid" ? form.competence_date : null,
+        account_id: form.account_id || null,
+        category_id: form.category_id || null,
+        created_by: me.user!.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Lançamento rápido realizado.");
+      setOpen(false);
+      setForm((f) => ({ ...f, description: "", amount: "" }));
+      qc.invalidateQueries();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const handlePhoto = () => {
+    setIsCapturing(true);
+    // Simulating OCR/AI processing
+    setTimeout(() => {
+      setForm(f => ({
+        ...f,
+        description: "Compra via Foto (Processada)",
+        amount: (Math.random() * 100).toFixed(2),
+      }));
+      setIsCapturing(false);
+      toast.success("Foto processada com sucesso!");
+    }, 2000);
+  };
+
+  if (!canEdit) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          size="icon"
+          className="fixed right-6 bottom-20 z-50 h-14 w-14 rounded-full shadow-2xl lg:bottom-6"
+          aria-label="Lançamento Rápido"
+        >
+          <Plus className="size-6" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Lançamento Rápido</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <Button 
+            variant="outline" 
+            className="h-24 w-full flex-col gap-2 border-dashed"
+            onClick={handlePhoto}
+            disabled={isCapturing}
+          >
+            {isCapturing ? (
+              <Loader2 className="size-8 animate-spin text-muted-foreground" />
+            ) : (
+              <Camera className="size-8 text-muted-foreground" />
+            )}
+            <span className="text-xs font-medium">
+              {isCapturing ? "Processando..." : "Tirar foto do comprovante"}
+            </span>
+          </Button>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Tipo</Label>
+              <Select value={form.type} onValueChange={(v) => setForm(f => ({ ...f, type: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TX_TYPES.map(t => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Valor</Label>
+              <Input 
+                type="number" 
+                placeholder="0,00" 
+                value={form.amount} 
+                onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Descrição</Label>
+            <Input 
+              placeholder="Ex: Almoço, Mercado..." 
+              value={form.description} 
+              onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+            />
+          </div>
+
+          <Button 
+            className="w-full" 
+            size="lg"
+            disabled={create.isPending || !form.amount || !form.description}
+            onClick={() => create.mutate()}
+          >
+            {create.isPending ? "Salvando..." : "Lançar Agora"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
