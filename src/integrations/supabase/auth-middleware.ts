@@ -1,60 +1,40 @@
 import { createMiddleware } from '@tanstack/react-start'
-import { getRequest } from '@tanstack/react-start/server'
-import { createClient } from '@supabase/supabase-js'
-import type { Database } from './types'
+import { getRequest, setResponseStatus } from '@tanstack/react-start/server'
+import { getSession } from '@/lib/auth.server'
 
 /**
- * Middleware para autenticação.
- * Como o projeto usa PostgreSQL local no EasyPanel via Supabase Self-Hosted,
- * as chaves e URL devem apontar para a instância local.
+ * Middleware de Autenticação para PostgreSQL puro.
+ * Verifica o token de sessão nos headers ou cookies.
  */
-export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
+export const requireAuth = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
-    const SUPABASE_URL = process.env['SUPABASE_URL'];
-    const SUPABASE_PUBLISHABLE_KEY = process.env['SUPABASE_PUBLISHABLE_KEY'];
-
-    // Fallback amigável para ambiente de desenvolvimento ou má configuração
-    if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-      console.warn('[Auth] Chaves do banco de dados ausentes no servidor.');
-      // Em produção real isso deve lançar erro, mas para o usuário conseguir debugar:
-      if (process.env['NODE_ENV'] === 'production') {
-          throw new Error('Erro de Configuração: SUPABASE_URL e SUPABASE_PUBLISHABLE_KEY não encontradas.');
-      }
-    }
-    
     const request = getRequest();
-    if (!request?.headers) throw new Error('Não autorizado: Sem headers');
-
     const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) throw new Error('Não autorizado: Token ausente');
-
-    const token = authHeader.replace('Bearer ', '');
     
-    // Supabase Self-Hosted usa JWT padrão do GoTrue
-    const supabase = createClient<Database>(
-      SUPABASE_URL || 'http://localhost:8000',
-      SUPABASE_PUBLISHABLE_KEY || 'dummy',
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        },
-      }
-    );
+    // Suporte a Bearer token ou Cookie
+    const token = authHeader?.replace('Bearer ', '') || 
+                 request.headers.get('cookie')?.split('; ').find(row => row.startsWith('session='))?.split('=')[1];
 
-    // Valida o token contra a instância local do banco
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (!token) {
+      setResponseStatus(401);
+      throw new Error('Não autorizado: Sessão ausente');
+    }
+
+    const session = await getSession(token);
     
-    if (error || !user) {
-      throw new Error('Não autorizado: Sessão inválida no banco local');
+    if (!session) {
+      setResponseStatus(401);
+      throw new Error('Não autorizado: Sessão inválida ou expirada');
     }
 
     return next({
       context: {
-        supabase,
-        userId: user.id,
-        user,
+        userId: session.user_id,
+        sessionId: session.id,
       },
     });
   },
 );
+
+// Alias para compatibilidade com código existente
+export const requireSupabaseAuth = requireAuth;
