@@ -49,3 +49,21 @@ cp .env.example .env
 docker compose up --build
 # http://localhost:3000
 ```
+
+## Painel administrativo da plataforma (`/admin`)
+
+O painel interno (clientes, planos, assinaturas, suporte e auditoria) exige o papel
+`platform_admin` na tabela `user_roles`.
+
+1. Faça login com a conta que será a administradora da plataforma.
+2. Acesse `/admin`. Enquanto não existir nenhum `platform_admin`, a tela oferece o botão
+   **"Tornar-me administrador da plataforma"** (bootstrap de primeira instalação).
+3. Depois do primeiro admin, novos administradores devem ser adicionados diretamente no banco:
+
+```sql
+insert into public.user_roles (user_id, role)
+values ('<uuid-do-usuario>', 'platform_admin');
+```
+
+Todas as ações administrativas (suspender cliente, alterar plano/assinatura, criar ou editar
+plano, enviar mensagem de suporte) são gravadas em `audit_logs`.
