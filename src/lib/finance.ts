@@ -11,7 +11,7 @@ export const iso = (d: Date) => d.toISOString().slice(0, 10);
 export const monthRange = (ref: Date) => {
   const start = new Date(ref.getFullYear(), ref.getMonth(), 1);
   const end = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
-  return { start: iso(start), end: iso(end), startDate: start, endDate: end };
+  return { start, end, startIso: iso(start), endIso: iso(end) };
 };
 
 export const addMonths = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth() + n, 1);
