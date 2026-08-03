@@ -6,8 +6,17 @@ function createSupabaseClient() {
   const SUPABASE_PUBLISHABLE_KEY = import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'] || process.env['SUPABASE_PUBLISHABLE_KEY'];
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-    // Retorna cliente nulo para evitar erros de inicialização no frontend
-    return {} as any;
+    // Retorna um objeto proxy para evitar erros de "reading signUp of undefined"
+    // Mas desvia as chamadas para nossas funções locais se necessário
+    return {
+      auth: {
+        getSession: async () => ({ data: { session: null }, error: null }),
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+        signInWithPassword: async () => ({ error: new Error("Use local auth") }),
+        signUp: async () => ({ error: new Error("Use local auth") }),
+        signOut: async () => ({ error: null }),
+      }
+    } as any;
   }
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
