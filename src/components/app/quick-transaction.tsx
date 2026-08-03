@@ -82,7 +82,7 @@ export function QuickTransaction() {
       reader.readAsDataURL(file);
       const base64 = await base64Promise;
 
-      const result = await aiProcessor({ image: base64 });
+      const result = await aiProcessor({ data: { image: base64 } });
       setForm((f) => ({
         ...f,
         description: result.description,
