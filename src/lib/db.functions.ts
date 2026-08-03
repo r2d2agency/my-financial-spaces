@@ -107,7 +107,7 @@ export const dbQuery = createServerFn({ method: "POST" })
         return res.rows[0].workspace_id;
       }
       if (data.rpcName === "list_ws_members") {
-        const res = await query("SELECT * FROM public.list_ws_members($1)", [data.rpcArgs._ws]);
+        const res = await query("SELECT * FROM public.list_ws_members($1::uuid)", [data.rpcArgs._ws]);
         return res.rows;
       }
     }
