@@ -23,18 +23,26 @@ export const db = {
       },
       
       gte(col: string, val: any) {
-        // Simplificação: apenas guarda o filtro. No backend precisaríamos tratar operados.
-        this.filters[col] = val;
+        this.filters[`${col}_gte`] = val;
         return this;
       },
       
       lte(col: string, val: any) {
-        this.filters[col] = val;
+        this.filters[`${col}_lte`] = val;
         return this;
       },
       
       in(col: string, vals: any[]) {
-        this.filters[col] = vals;
+        this.filters[`${col}_in`] = vals;
+        return this;
+      },
+
+      not(col: string, operator: string, val: any) {
+        if (operator === "is" && val === null) {
+          this.filters[`${col}_not_null`] = true;
+        } else {
+          this.filters[`${col}_not_${operator}`] = val;
+        }
         return this;
       },
       
@@ -79,7 +87,6 @@ export const db = {
         return { data: rows, error: null };
       },
 
-      // Métodos de escrita retornam novo objeto ou modificam o atual
       update(data: any) {
         this.action = "update";
         this.payload = data;
@@ -89,43 +96,23 @@ export const db = {
       delete() {
         this.action = "delete";
         return this;
+      },
+
+      insert: async (data: any) => {
+        const row = await dbQuery({ data: { table: this.table, action: "insert", data } });
+        return { data: row, error: null };
       }
     };
 
     // Binding para manter o contexto do 'this'
-    chain.select = chain.select.bind(chain);
-    chain.eq = chain.eq.bind(chain);
-    chain.gte = chain.gte.bind(chain);
-    chain.lte = chain.lte.bind(chain);
-    chain.in = chain.in.bind(chain);
-    chain.order = chain.order.bind(chain);
-    chain.limit = chain.limit.bind(chain);
-    chain.maybeSingle = chain.maybeSingle.bind(chain);
-    chain.execute = chain.execute.bind(chain);
-    chain.update = chain.update.bind(chain);
-    chain.delete = chain.delete.bind(chain);
+    const methods = ['select', 'eq', 'gte', 'lte', 'in', 'not', 'order', 'limit', 'maybeSingle', 'execute', 'update', 'delete', 'insert'];
+    methods.forEach(m => chain[m] = chain[m].bind(chain));
 
     return chain;
   },
   
-  insert: async (table: string, data: any) => {
-    const row = await dbQuery({ data: { table, action: "insert", data } });
-    return { data: row, error: null };
-  },
-
   async rpc(name: string, args: any) {
     const data = await dbQuery({ data: { table: "", action: "rpc", rpcName: name, rpcArgs: args } });
     return { data, error: null };
   }
-};
-
-// Adiciona insert ao db.from para compatibilidade
-const originalFrom = db.from;
-db.from = (table: string) => {
-  const chain = originalFrom(table);
-  chain.insert = async (data: any) => {
-    const row = await dbQuery({ data: { table, action: "insert", data } });
-    return { data: row, error: null };
-  };
-  return chain;
 };
