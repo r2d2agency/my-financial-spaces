@@ -253,7 +253,7 @@ function AdminConsole() {
 
         <TabsContent value="clientes" className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {cards.map((c) => (
+            {cards.map((c: any) => (
               <Card key={c.label}>
                 <CardHeader className="pb-2">
                   <CardDescription>{c.label}</CardDescription>
@@ -261,6 +261,7 @@ function AdminConsole() {
                 </CardHeader>
               </Card>
             ))}
+
           </div>
 
           <div className="relative max-w-sm">
@@ -278,7 +279,7 @@ function AdminConsole() {
             {clients.data?.length === 0 && (
               <p className="text-sm text-muted-foreground">Nenhum cliente encontrado.</p>
             )}
-            {clients.data?.map((c) => (
+            {clients.data?.map((c: any) => (
               <Card key={c.id}>
                 <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
                   <div>
@@ -320,7 +321,7 @@ function AdminConsole() {
                         <SelectValue placeholder="Selecionar" />
                       </SelectTrigger>
                       <SelectContent>
-                        {(plans.data ?? []).map((p) => (
+                        {(plans.data ?? []).map((p: any) => (
                           <SelectItem key={p.id} value={p.id}>
                             {p.name}
                           </SelectItem>
@@ -390,7 +391,7 @@ function AdminConsole() {
         <TabsContent value="planos" className="space-y-4">
           <Button onClick={() => setPlanForm({ ...emptyPlan })}>Novo plano</Button>
           <div className="grid gap-3 md:grid-cols-2">
-            {(plans.data ?? []).map((p) => (
+            {(plans.data ?? []).map((p: any) => (
               <Card key={p.id}>
                 <CardHeader>
                   <div className="flex items-center justify-between gap-2">
@@ -436,7 +437,7 @@ function AdminConsole() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os clientes</SelectItem>
-              {(clients.data ?? []).map((c) => (
+              {(clients.data ?? []).map((c: any) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.name}
                 </SelectItem>
