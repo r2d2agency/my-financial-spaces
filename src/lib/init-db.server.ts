@@ -239,23 +239,23 @@ export async function initializeDatabase() {
         ON CONFLICT (slug) DO NOTHING;
 
         -- 6. FUNÇÃO CREATE_WORKSPACE
-        CREATE OR REPLACE FUNCTION public.create_workspace(_user_id UUID, _name TEXT, _plan_slug TEXT DEFAULT 'individual')
+        CREATE OR REPLACE FUNCTION public.create_workspace(_name TEXT, _expected_income NUMERIC, _user_id UUID)
         RETURNS UUID AS $$
         DECLARE
             v_ws_id UUID;
             v_plan_id UUID;
         BEGIN
             -- 1. Criar Workspace
-            INSERT INTO public.workspaces (name, owner_id)
-            VALUES (_name, _user_id)
+            INSERT INTO public.workspaces (name, owner_id, expected_income)
+            VALUES (_name, _user_id, _expected_income)
             RETURNING id INTO v_ws_id;
 
             -- 2. Adicionar como Owner
             INSERT INTO public.workspace_members (workspace_id, user_id, role, can_invite)
             VALUES (v_ws_id, _user_id, 'owner', true);
 
-            -- 3. Obter ID do Plano
-            SELECT id INTO v_plan_id FROM public.plans WHERE slug = _plan_slug;
+            -- 3. Obter ID do Plano (Individual por padrão)
+            SELECT id INTO v_plan_id FROM public.plans WHERE slug = 'individual';
 
             -- 4. Criar Assinatura (Trial)
             INSERT INTO public.subscriptions (workspace_id, plan_id, status, current_period_end)
@@ -274,6 +274,7 @@ export async function initializeDatabase() {
             RETURN v_ws_id;
         END;
         $$ LANGUAGE plpgsql SECURITY DEFINER;
+      
       
       `;
 
