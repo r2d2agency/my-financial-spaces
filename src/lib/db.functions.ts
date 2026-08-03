@@ -62,13 +62,40 @@ export const dbQuery = createServerFn({ method: "POST" })
       return res.rows;
     }
 
-    if (data.action === "insert") {
+    if (data.action === "update") {
       const keys = Object.keys(data.data);
       const vals = Object.values(data.data);
-      const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
-      const sql = `INSERT INTO ${data.table} (${keys.join(", ")}) VALUES (${placeholders}) RETURNING *`;
-      const res = await query(sql, vals);
-      return res.rows[0];
+      const setClauses = keys.map((key, i) => `${key} = $${i + 1}`).join(", ");
+      
+      let sql = `UPDATE ${data.table} SET ${setClauses}`;
+      const params = [...vals];
+      
+      if (data.filters) {
+        const whereClauses = Object.entries(data.filters).map(([key, val]) => {
+          params.push(val);
+          return `${key} = $${params.length}`;
+        });
+        sql += ` WHERE ${whereClauses.join(" AND ")}`;
+      }
+      
+      const res = await query(sql, params);
+      return res.rowCount;
+    }
+
+    if (data.action === "delete") {
+      let sql = `DELETE FROM ${data.table}`;
+      const params: any[] = [];
+      
+      if (data.filters) {
+        const whereClauses = Object.entries(data.filters).map(([key, val]) => {
+          params.push(val);
+          return `${key} = $${params.length}`;
+        });
+        sql += ` WHERE ${whereClauses.join(" AND ")}`;
+      }
+      
+      const res = await query(sql, params);
+      return res.rowCount;
     }
 
     if (data.action === "rpc") {
