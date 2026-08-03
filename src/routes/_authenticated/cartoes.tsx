@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db-browser";
 import { useWorkspace } from "@/lib/workspace";
 import { brl, num } from "@/lib/finance";
 import { Button } from "@/components/ui/button";
@@ -37,8 +37,8 @@ function Cartoes() {
     enabled: !!wsId,
     queryFn: async () => {
       const [cards, tx] = await Promise.all([
-        supabase.from("credit_cards").select("*").eq("workspace_id", wsId!).eq("archived", false).order("name"),
-        supabase.from("transactions").select("amount, card_id, status").eq("workspace_id", wsId!).not("card_id", "is", null),
+        db.from("credit_cards").select("*").eq("workspace_id", wsId!).eq("archived", false).order("name").execute(),
+        db.from("transactions").select("amount, card_id, status").eq("workspace_id", wsId!).not("card_id", "is", null).execute(),
       ]);
       return { cards: cards.data ?? [], tx: tx.data ?? [] };
     },
@@ -46,7 +46,7 @@ function Cartoes() {
 
   const create = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("credit_cards").insert({
+      const { error } = await db.from("credit_cards").insert({
         workspace_id: wsId!,
         name: f.name.trim(),
         brand: f.brand.trim() || null,

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db-browser";
 import { useWorkspace } from "@/lib/workspace";
 import { addMonths, brl, iso, monthLabel, monthRange, num } from "@/lib/finance";
 import { Button } from "@/components/ui/button";
@@ -37,14 +37,15 @@ function Planejamento() {
     enabled: !!wsId,
     queryFn: async () => {
       const [cats, budgets, tx] = await Promise.all([
-        supabase.from("categories").select("id, name, kind").eq("workspace_id", wsId!).eq("kind", "expense").order("name"),
-        supabase.from("budgets").select("id, category_id, planned_amount").eq("workspace_id", wsId!).eq("month", month),
-        supabase
+        db.from("categories").select("id, name, kind").eq("workspace_id", wsId!).eq("kind", "expense").order("name").execute(),
+        db.from("budgets").select("id, category_id, planned_amount").eq("workspace_id", wsId!).eq("month", month).execute(),
+        db
           .from("transactions")
           .select("amount, category_id, type")
           .eq("workspace_id", wsId!)
           .gte("competence_date", month)
-          .lte("competence_date", iso(end)),
+          .lte("competence_date", iso(end))
+          .execute(),
       ]);
       return { cats: cats.data ?? [], budgets: budgets.data ?? [], tx: tx.data ?? [] };
     },
@@ -54,10 +55,10 @@ function Planejamento() {
     mutationFn: async (p: { category_id: string; planned: number }) => {
       const existing = ((data as any)?.budgets ?? []).find((b: any) => b.category_id === p.category_id);
       if (existing) {
-        const { error } = await supabase.from("budgets").update({ planned_amount: p.planned }).eq("id", existing.id);
+        const { error } = await db.from("budgets").update({ planned_amount: p.planned }).eq("id", existing.id).execute();
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await db
           .from("budgets")
           .insert({ workspace_id: wsId!, month, category_id: p.category_id, planned_amount: p.planned, kind: "expense" });
         if (error) throw error;

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db-browser";
 import { useWorkspace } from "@/lib/workspace";
 import { brl, num, simulatePayoff } from "@/lib/finance";
 import { Button } from "@/components/ui/button";
@@ -46,7 +46,7 @@ function Dividas() {
     queryKey: ["debts", wsId],
     enabled: !!wsId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("debts").select("*").eq("workspace_id", wsId!).order("priority");
+      const { data, error } = await db.from("debts").select("*").eq("workspace_id", wsId!).order("priority").execute();
       if (error) throw error;
       return data ?? [];
     },
@@ -54,7 +54,7 @@ function Dividas() {
 
   const create = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("debts").insert({
+      const { error } = await db.from("debts").insert({
         workspace_id: wsId!,
         name: f.name.trim(),
         creditor: f.creditor.trim() || null,
@@ -78,7 +78,7 @@ function Dividas() {
 
   const pay = useMutation({
     mutationFn: async (d: { id: string; amount: number; outstanding: number; paid: number }) => {
-      const { error } = await supabase.from("debt_payments").insert({
+      const { error } = await db.from("debt_payments").insert({
         workspace_id: wsId!,
         debt_id: d.id,
         amount: d.amount,
@@ -86,10 +86,11 @@ function Dividas() {
       });
       if (error) throw error;
       const rest = Math.max(0, d.outstanding - d.amount);
-      const { error: e2 } = await supabase
+      const { error: e2 } = await db
         .from("debts")
         .update({ outstanding: rest, installments_paid: d.paid + 1, status: rest <= 0.01 ? "paid" : "active" })
-        .eq("id", d.id);
+        .eq("id", d.id)
+        .execute();
       if (e2) throw e2;
     },
     onSuccess: () => {

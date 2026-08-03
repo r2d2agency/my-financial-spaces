@@ -30,13 +30,14 @@ function Casa() {
     enabled: !!wsId,
     queryFn: async () => {
       const [cats, tx] = await Promise.all([
-        supabase.from("categories").select("id, name, is_house_cost").eq("workspace_id", wsId!).eq("is_house_cost", true),
-        supabase
+        db.from("categories").select("id, name, is_house_cost").eq("workspace_id", wsId!).eq("is_house_cost", true).execute(),
+        db
           .from("transactions")
           .select("amount, category_id, type")
           .eq("workspace_id", wsId!)
           .gte("competence_date", iso(start))
-          .lte("competence_date", iso(end)),
+          .lte("competence_date", iso(end))
+          .execute(),
       ]);
       return { cats: cats.data ?? [], tx: tx.data ?? [] };
     },
