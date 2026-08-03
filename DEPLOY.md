@@ -15,8 +15,8 @@ Copie de `.env.example`. Importante: as `VITE_*` são embutidas no build,
 então no EasyPanel marque-as também como **Build Args** (Advanced → Build Args):
 
 ```
-VITE_SUPABASE_URL=http://IP-DO-EASYPANEL:8000
-VITE_SUPABASE_PUBLISHABLE_KEY=sua-anon-key
+VITE_SUPABASE_URL=https://seu-dominio-supabase.host (URL PÚBLICA do seu Supabase no EasyPanel)
+VITE_SUPABASE_PUBLISHABLE_KEY=sua-anon-key-real
 VITE_SUPABASE_PROJECT_ID=seu-id
 ```
 
