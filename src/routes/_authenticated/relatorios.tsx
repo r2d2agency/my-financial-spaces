@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db-browser";
 import { useWorkspace } from "@/lib/workspace";
 import { addMonths, brl, iso, monthLabel, monthRange, num, isIncomeType } from "@/lib/finance";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,13 +33,14 @@ function Relatorios() {
     enabled: !!wsId,
     queryFn: async () => {
       const [tx, cats] = await Promise.all([
-        supabase
+        db
           .from("transactions")
           .select("amount, type, competence_date, category_id")
           .eq("workspace_id", wsId!)
           .gte("competence_date", iso(from))
-          .lte("competence_date", iso(end)),
-        supabase.from("categories").select("id, name").eq("workspace_id", wsId!),
+          .lte("competence_date", iso(end))
+          .execute(),
+        db.from("categories").select("id, name").eq("workspace_id", wsId!).execute(),
       ]);
       return { tx: tx.data ?? [], cats: cats.data ?? [] };
     },

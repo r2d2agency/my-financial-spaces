@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db-browser";
 import { useWorkspace } from "@/lib/workspace";
 import { addMonths, brl, iso, monthLabel, monthRange, num, isIncomeType } from "@/lib/finance";
 import { Button } from "@/components/ui/button";
@@ -31,12 +31,13 @@ function Calendario() {
     queryKey: ["cal", wsId, iso(start)],
     enabled: !!wsId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("transactions")
         .select("id, description, amount, type, status, competence_date")
         .eq("workspace_id", wsId!)
         .gte("competence_date", iso(start))
-        .lte("competence_date", iso(end));
+        .lte("competence_date", iso(end))
+        .execute();
       if (error) throw error;
       return data ?? [];
     },

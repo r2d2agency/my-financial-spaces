@@ -132,12 +132,17 @@ function RootComponent() {
   const router = useRouter();
 
   useEffect(() => {
-    const { data } = (supabase.auth?.onAuthStateChange?.((event: string) => {
-      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+    // Listener simplificado para auth local: apenas invalida se o token sumir/mudar
+    const handleAuthChange = () => {
       router.invalidate();
-      if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
-    }) || { data: { subscription: { unsubscribe: () => {} } } });
-    return () => data?.subscription?.unsubscribe?.();
+      queryClient.invalidateQueries();
+    };
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'auth_token') handleAuthChange();
+    });
+
+    return () => window.removeEventListener('storage', handleAuthChange);
   }, [router, queryClient]);
 
   return (

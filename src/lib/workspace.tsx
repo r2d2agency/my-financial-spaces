@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db-browser";
 import type { Role } from "@/lib/finance";
 
 export type Membership = {
@@ -34,10 +34,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["memberships"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("workspace_members")
         .select("workspace_id, role, hide_balances, workspaces(id, name, expected_income, onboarding_done)")
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true })
+        .execute();
       if (error) throw error;
       return (data ?? []) as unknown as Membership[];
     },

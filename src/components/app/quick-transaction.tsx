@@ -3,10 +3,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { Plus, Camera, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db-browser";
 import { useWorkspace } from "@/lib/workspace";
 import { TX_TYPES, iso, num } from "@/lib/finance";
 import { processReceipt } from "@/lib/ai.functions";
+import { getCurrentUser } from "@/lib/auth-client.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +31,7 @@ export function QuickTransaction() {
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const aiProcessor = useServerFn(processReceipt);
+  const getUser = useServerFn(getCurrentUser);
   const [open, setOpen] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
 
@@ -45,8 +47,8 @@ export function QuickTransaction() {
 
   const create = useMutation({
     mutationFn: async () => {
-      const { data: me } = await supabase.auth.getUser();
-      const { error } = await supabase.from("transactions").insert({
+      const me = await getUser({});
+      const { error } = await db.from("transactions").insert({
         workspace_id: wsId!,
         type: form.type as any,
         description: form.description.trim(),
@@ -56,7 +58,7 @@ export function QuickTransaction() {
         paid_date: form.status === "paid" ? form.competence_date : null,
         account_id: form.account_id || null,
         category_id: form.category_id || null,
-        created_by: me.user!.id,
+        created_by: me?.id,
       });
       if (error) throw error;
     },

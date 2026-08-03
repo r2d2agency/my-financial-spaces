@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Wallet } from "lucide-react";
+import { signUp as localSignUp, signIn as localSignIn } from "@/lib/auth.functions";
+import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: z.object({ mode: z.enum(["login", "signup"]).optional() }),
@@ -32,6 +34,8 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const doSignUp = useServerFn(localSignUp);
+  const doSignIn = useServerFn(localSignIn);
 
   useEffect(() => {
     supabase.auth?.getSession()?.then(({ data }: any) => {
@@ -44,20 +48,12 @@ function AuthPage() {
     setLoading(true);
     try {
       if (signup) {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin, data: { full_name: name } },
-        });
-        if (error) throw error;
-        if (!data.session) {
-          toast.success("Confirme seu e-mail para ativar a conta.");
-          return;
-        }
+        const result = await doSignUp({ data: { email, password, name } });
+        localStorage.setItem("auth_token", result.sessionId);
         navigate({ to: "/onboarding", replace: true });
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        const result = await doSignIn({ data: { email, password } });
+        localStorage.setItem("auth_token", result.sessionId);
         navigate({ to: "/dashboard", replace: true });
       }
     } catch (err) {

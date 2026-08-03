@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUser } from "@/lib/auth-client.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { db } from "@/lib/db-browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,8 +21,8 @@ import { ACCOUNT_KINDS, ROLES, brl, num } from "@/lib/finance";
 export const Route = createFileRoute("/onboarding")({
   ssr: false,
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) throw redirect({ to: "/auth", replace: true });
+    const user = await getCurrentUser();
+    if (!user) throw redirect({ to: "/auth", replace: true });
   },
   component: Onboarding,
   head: () => ({
@@ -49,6 +51,7 @@ function Onboarding() {
   const qc = useQueryClient();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const getUser = useServerFn(getCurrentUser);
 
   const [name, setName] = useState("Minha Vida Financeira");
   const [income, setIncome] = useState("");
@@ -62,7 +65,7 @@ function Onboarding() {
   const finish = async () => {
     setSaving(true);
     try {
-      const { data: wsId, error } = await supabase.rpc("create_workspace", {
+      const { data: wsId, error } = await db.rpc("create_workspace", {
         _name: name.trim() || "Meu espaço",
         _income: num(income),
       });
@@ -71,34 +74,34 @@ function Onboarding() {
 
       const rows = accounts.filter((a) => a.name.trim());
       if (rows.length) {
-        const { error: e } = await supabase.from("financial_accounts").insert(
+        const { error: e } = await db.from("financial_accounts").insert(
           rows.map((a) => ({
             workspace_id: ws,
             name: a.name.trim(),
             kind: a.kind as never,
             initial_balance: num(a.initial_balance),
-          })),
+          }))
         );
         if (e) throw e;
       }
 
       const cardRows = cards.filter((c) => c.name.trim());
       if (cardRows.length) {
-        const { error: e } = await supabase.from("credit_cards").insert(
+        const { error: e } = await db.from("credit_cards").insert(
           cardRows.map((c) => ({
             workspace_id: ws,
             name: c.name.trim(),
             credit_limit: num(c.credit_limit),
             closing_day: Number(c.closing_day) || 1,
             due_day: Number(c.due_day) || 10,
-          })),
+          }))
         );
         if (e) throw e;
       }
 
       const fixedRows = fixed.filter((f) => f.description.trim());
       if (fixedRows.length) {
-        const { error: e } = await supabase.from("recurring_transactions").insert(
+        const { error: e } = await db.from("recurring_transactions").insert(
           fixedRows.map((f) => ({
             workspace_id: ws,
             type: "expense" as never,
@@ -106,14 +109,14 @@ function Onboarding() {
             amount: num(f.amount),
             frequency: "monthly",
             day_of_month: Number(f.day_of_month) || 5,
-          })),
+          }))
         );
         if (e) throw e;
       }
 
       const debtRows = debts.filter((d) => d.name.trim());
       if (debtRows.length) {
-        const { error: e } = await supabase.from("debts").insert(
+        const { error: e } = await db.from("debts").insert(
           debtRows.map((d) => ({
             workspace_id: ws,
             name: d.name.trim(),
@@ -122,39 +125,39 @@ function Onboarding() {
             installment_amount: num(d.installment_amount),
             installments_total: Number(d.installments_total) || 1,
             due_day: Number(d.due_day) || 10,
-          })),
+          }))
         );
         if (e) throw e;
       }
 
       const inviteRows = invites.filter((i) => i.email.trim());
       if (inviteRows.length) {
-        const { data: me } = await supabase.auth.getUser();
-        const { error: e } = await supabase.from("workspace_invites").insert(
+        const me = await getUser({});
+        const { error: e } = await db.from("workspace_invites").insert(
           inviteRows.map((i) => ({
             workspace_id: ws,
             email: i.email.trim().toLowerCase(),
             role: i.role as never,
             hide_balances: i.hide_balances,
-            invited_by: me.user!.id,
-          })),
+            invited_by: me?.id,
+          }))
         );
         if (e) throw e;
       }
 
       const goalRows = goals.filter((g) => g.name.trim());
       if (goalRows.length) {
-        const { error: e } = await supabase.from("financial_goals").insert(
+        const { error: e } = await db.from("financial_goals").insert(
           goalRows.map((g) => ({
             workspace_id: ws,
             name: g.name.trim(),
             target_amount: num(g.target_amount),
-          })),
+          }))
         );
         if (e) throw e;
       }
 
-      await supabase.from("workspaces").update({ onboarding_done: true }).eq("id", ws);
+      await db.from("workspaces").update({ onboarding_done: true }).eq("id", ws).execute();
       localStorage.setItem("ef.workspace", ws);
       await qc.invalidateQueries();
       toast.success("Espaço criado!");

@@ -1,7 +1,9 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { signOut as localSignOut } from "@/lib/auth-client.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { db } from "@/lib/db-browser";
 import { useWorkspace } from "@/lib/workspace";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,7 +53,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { data: isPlatformAdmin } = useQuery({
     queryKey: ["is-platform-admin"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await db
         .from("user_roles")
         .select("role")
         .eq("role", "platform_admin")
@@ -63,11 +65,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { data: notifications } = useQuery({
     queryKey: ["notifications"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await db
         .from("notifications")
         .select("id, title, body, read_at, created_at")
         .order("created_at", { ascending: false })
-        .limit(20);
+        .execute();
       return data ?? [];
     },
   });
@@ -78,7 +80,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     mutationFn: async () => {
       const ids = (notifications ?? []).filter((n: any) => !n.read_at).map((n: any) => n.id);
       if (!ids.length) return;
-      await supabase.from("notifications").update({ read_at: new Date().toISOString() }).in("id", ids);
+      await db.from("notifications").update({ read_at: new Date().toISOString() }).in("id", ids).execute();
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
@@ -86,7 +88,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await qc.cancelQueries();
     qc.clear();
-    await supabase.auth.signOut();
+    await localSignOut({});
+    localStorage.removeItem("auth_token");
     navigate({ to: "/auth", replace: true });
   };
 

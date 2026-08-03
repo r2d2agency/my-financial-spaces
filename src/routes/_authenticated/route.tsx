@@ -1,13 +1,13 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
 import { WorkspaceProvider } from "@/lib/workspace";
 import { AppShell } from "@/components/app/app-shell";
+import { getCurrentUser } from "@/lib/auth-client.functions";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) throw redirect({ to: "/auth", replace: true });
+    const user = await getCurrentUser();
+    if (!user) throw redirect({ to: "/auth", replace: true });
   },
   component: () => (
     <WorkspaceProvider>

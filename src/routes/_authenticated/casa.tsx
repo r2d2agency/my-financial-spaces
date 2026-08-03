@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db-browser";
 import { useWorkspace } from "@/lib/workspace";
 import { brl, iso, monthLabel, monthRange, num } from "@/lib/finance";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,13 +30,14 @@ function Casa() {
     enabled: !!wsId,
     queryFn: async () => {
       const [cats, tx] = await Promise.all([
-        supabase.from("categories").select("id, name, is_house_cost").eq("workspace_id", wsId!).eq("is_house_cost", true),
-        supabase
+        db.from("categories").select("id, name, is_house_cost").eq("workspace_id", wsId!).eq("is_house_cost", true).execute(),
+        db
           .from("transactions")
           .select("amount, category_id, type")
           .eq("workspace_id", wsId!)
           .gte("competence_date", iso(start))
-          .lte("competence_date", iso(end)),
+          .lte("competence_date", iso(end))
+          .execute(),
       ]);
       return { cats: cats.data ?? [], tx: tx.data ?? [] };
     },
