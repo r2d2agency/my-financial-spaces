@@ -32,21 +32,11 @@ export const dbQuery = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const userId = await verifyAuth();
     
-    // Simplificando: o RLS está no banco, mas como estamos usando pg direto
-    // precisamos garantir que as queries incluam o filtro de segurança se não for RLS real.
-    // O usuário disse que o RLS está configurado no banco, então o pool de conexão 
-    // precisaria estar logado como o usuário, o que é difícil com pg.Pool simples.
-    // Por enquanto, faremos a filtragem básica aqui ou confiaremos no SQL do banco
-    // se o banco estiver configurado com RLS e o middleware de conexão tratar isso.
-    
-    // Nota: Como estamos em um ambiente de desenvolvimento rápido, faremos queries SQL diretas.
-    // Em um app real, cada uma destas seria uma server function específica.
-
     if (data.action === "select") {
       let sql = `SELECT ${data.columns || "*"} FROM ${data.table}`;
       const params: any[] = [];
       if (data.filters) {
-        const clauses = Object.entries(data.filters).map(([key, val], i) => {
+        const clauses = Object.entries(data.filters).map(([key, val]) => {
           params.push(val);
           return `${key} = $${params.length}`;
         });
@@ -60,6 +50,15 @@ export const dbQuery = createServerFn({ method: "POST" })
       }
       const res = await query(sql, params);
       return res.rows;
+    }
+
+    if (data.action === "insert") {
+      const keys = Object.keys(data.data);
+      const vals = Object.values(data.data);
+      const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
+      const sql = `INSERT INTO ${data.table} (${keys.join(", ")}) VALUES (${placeholders}) RETURNING *`;
+      const res = await query(sql, vals);
+      return res.rows[0];
     }
 
     if (data.action === "update") {
@@ -113,6 +112,5 @@ export const dbQuery = createServerFn({ method: "POST" })
       }
     }
 
-    // Outras ações poderiam ser implementadas aqui
     throw new Error("Ação não suportada");
   });
