@@ -237,6 +237,44 @@ export async function initializeDatabase() {
          ('premium', 'Premium', 6990, 5, 10, 50),
          ('profissional', 'Profissional', 12990, 50, 50, 200)
         ON CONFLICT (slug) DO NOTHING;
+
+        -- 6. FUNÇÃO CREATE_WORKSPACE
+        CREATE OR REPLACE FUNCTION public.create_workspace(_user_id UUID, _name TEXT, _plan_slug TEXT DEFAULT 'individual')
+        RETURNS UUID AS $$
+        DECLARE
+            v_ws_id UUID;
+            v_plan_id UUID;
+        BEGIN
+            -- 1. Criar Workspace
+            INSERT INTO public.workspaces (name, owner_id)
+            VALUES (_name, _user_id)
+            RETURNING id INTO v_ws_id;
+
+            -- 2. Adicionar como Owner
+            INSERT INTO public.workspace_members (workspace_id, user_id, role, can_invite)
+            VALUES (v_ws_id, _user_id, 'owner', true);
+
+            -- 3. Obter ID do Plano
+            SELECT id INTO v_plan_id FROM public.plans WHERE slug = _plan_slug;
+
+            -- 4. Criar Assinatura (Trial)
+            INSERT INTO public.subscriptions (workspace_id, plan_id, status, current_period_end)
+            VALUES (v_ws_id, v_plan_id, 'trialing', CURRENT_DATE + INTERVAL '30 days');
+
+            -- 5. Criar Categorias Padrão
+            INSERT INTO public.categories (workspace_id, name, kind, color) VALUES
+            (v_ws_id, 'Aluguel / Hipoteca', 'expense', '#ef4444'),
+            (v_ws_id, 'Energia', 'expense', '#eab308'),
+            (v_ws_id, 'Água', 'expense', '#3b82f6'),
+            (v_ws_id, 'Internet', 'expense', '#8b5cf6'),
+            (v_ws_id, 'Supermercado', 'expense', '#22c55e'),
+            (v_ws_id, 'Salário', 'income', '#10b981'),
+            (v_ws_id, 'Freelance', 'income', '#6366f1');
+
+            RETURN v_ws_id;
+        END;
+        $$ LANGUAGE plpgsql SECURITY DEFINER;
+      
       `;
 
       await query(sql);
