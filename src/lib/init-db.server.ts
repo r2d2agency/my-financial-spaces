@@ -275,6 +275,18 @@ export async function initializeDatabase() {
         END;
         $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+        -- 8. FUNÇÃO HAS_ROLE
+        CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role public.app_role)
+        RETURNS BOOLEAN AS $$
+        BEGIN
+            RETURN EXISTS (
+                SELECT 1 FROM public.user_roles
+                WHERE user_id = _user_id AND role = _role
+            );
+        END;
+        $$ LANGUAGE plpgsql SECURITY DEFINER;
+      
+
         -- 7. FUNÇÃO LIST_WS_MEMBERS
         CREATE OR REPLACE FUNCTION public.list_ws_members(_ws UUID)
         RETURNS TABLE (
