@@ -60,7 +60,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           Espaço Financeiro
         </div>
         <div className="border-b border-border p-3">
-          <Select value={wsId ?? undefined} onValueChange={setWsId}>
+          <Select value={wsId ?? ""} onValueChange={setWsId}>
             <SelectTrigger>
               <SelectValue placeholder="Selecione o espaço" />
             </SelectTrigger>

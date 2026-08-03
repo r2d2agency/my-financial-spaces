@@ -124,15 +124,18 @@ function Dividas() {
                   ["installments_total", "Total de parcelas"],
                   ["installments_paid", "Parcelas pagas"],
                   ["due_day", "Dia de vencimento"],
-                ].map(([k, label]) => (
-                  <div key={k} className="space-y-1">
-                    <Label>{label}</Label>
-                    <Input
-                      value={(f as Record<string, string>)[k]}
-                      onChange={(e) => setF((p) => ({ ...p, [k]: e.target.value }))}
-                    />
-                  </div>
-                ))}
+                ].map((row) => {
+                  const k = row[0] as string;
+                  return (
+                    <div key={k} className="space-y-1">
+                      <Label>{row[1]}</Label>
+                      <Input
+                        value={(f as Record<string, string>)[k] ?? ""}
+                        onChange={(e) => setF((p) => ({ ...p, [k]: e.target.value }))}
+                      />
+                    </div>
+                  );
+                })}
               </div>
               <Button className="mt-3 w-full" disabled={!f.name || create.isPending} onClick={() => create.mutate()}>
                 Salvar
