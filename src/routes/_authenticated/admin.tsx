@@ -449,7 +449,7 @@ function AdminConsole() {
               {audit.data?.length === 0 && (
                 <p className="p-4 text-sm text-muted-foreground">Nenhum evento registrado.</p>
               )}
-              {(audit.data ?? []).map((a) => (
+              {(audit.data ?? []).map((a: any) => (
                 <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
                   <div>
                     <p className="font-medium">{a.action}</p>
