@@ -30,6 +30,7 @@ SUPABASE_URL=http://IP-DO-EASYPANEL:8000
 SUPABASE_ANON_KEY=sua-anon-key
 SUPABASE_SERVICE_ROLE_KEY=sua-service-role-key
 DATABASE_URL=postgresql://postgres:senha@IP-DO-EASYPANEL:5432/postgres
+OPENAI_API_KEY=sua-chave-aqui
 ```
 
 > **Nota sobre PostgreSQL:** Se estiver usando o template Supabase no EasyPanel, o `VITE_SUPABASE_URL` e `SUPABASE_URL` devem apontar para a porta da API do Kong (geralmente `8000`). O `DATABASE_URL` aponta direto para o banco (porta `5432`).
