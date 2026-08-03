@@ -6,7 +6,7 @@ WORKDIR /app
 ENV NITRO_PRESET=node-server
 
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 COPY . .
 
