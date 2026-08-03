@@ -88,7 +88,7 @@ function Dashboard() {
   const debtTotal = (data?.debts ?? []).reduce((s: number, d: any) => s + num(d.outstanding), 0);
 
   const byDay = Object.values(
-    tx.reduce<Record<string, { dia: string; receitas: number; despesas: number }>>((acc: any, t: any) => {
+    (tx as any[]).reduce<Record<string, { dia: string; receitas: number; despesas: number }>>((acc: any, t: any) => {
       const key = t.competence_date;
       acc[key] ??= { dia: key.slice(8, 10), receitas: 0, despesas: 0 };
       if (isIncomeType(t.type)) acc[key].receitas += num(t.amount);
