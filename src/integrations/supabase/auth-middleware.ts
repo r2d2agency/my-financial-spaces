@@ -4,14 +4,12 @@ import { getSession } from '@/lib/auth.server'
 
 /**
  * Middleware de Autenticação para PostgreSQL puro.
- * Verifica o token de sessão nos headers ou cookies.
  */
 export const requireAuth = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
     const request = getRequest();
     const authHeader = request.headers.get('authorization');
     
-    // Suporte a Bearer token ou Cookie
     const token = authHeader?.replace('Bearer ', '') || 
                  request.headers.get('cookie')?.split('; ').find(row => row.startsWith('session='))?.split('=')[1];
 
@@ -31,12 +29,10 @@ export const requireAuth = createMiddleware({ type: 'function' }).server(
       context: {
         userId: session.user_id,
         sessionId: session.id,
-        supabase: {}, // Objeto vazio para compatibilidade de tipos
+        supabase: {} as any, // Mock para compatibilidade
       },
     });
   },
 );
 
-
-// Alias para compatibilidade com código existente
 export const requireSupabaseAuth = requireAuth;
