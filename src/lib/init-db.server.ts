@@ -5,15 +5,13 @@ export async function initializeDatabase() {
   
   try {
     // Check if a basic table exists
-    const checkTable = await query(`
-      SELECT (
-        SELECT COUNT(*) FROM pg_proc 
-        WHERE proname IN ('create_workspace', 'list_ws_members', 'has_role')
-        AND pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')
-      ) = 3 as exists;
+    const checkFunctions = await query(`
+      SELECT COUNT(*) as count FROM pg_proc 
+      WHERE proname IN ('create_workspace', 'list_ws_members', 'has_role')
+      AND pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public');
     `);
 
-    if (!checkTable.rows[0].exists) {
+    if (parseInt(checkFunctions.rows[0].count) < 3) {
       console.log("Database not initialized. Running migrations...");
       
       // SQL for full schema initialization
