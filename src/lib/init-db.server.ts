@@ -11,8 +11,9 @@ export async function initializeDatabase() {
       AND pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public');
     `);
 
-    if (parseInt(checkFunctions.rows[0].count) < 3) {
-      console.log("Database not initialized. Running migrations...");
+    // Force re-run for now to ensure all missing tables are created if user is stuck
+    if (true || parseInt(checkFunctions.rows[0].count) < 3) {
+      console.log("Database verification/initialization running...");
       
       // SQL for full schema initialization
       // Note: We run these separately or handle errors if the driver doesn't support multiple statements well.
