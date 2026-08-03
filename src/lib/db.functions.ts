@@ -101,10 +101,10 @@ export const dbQuery = createServerFn({ method: "POST" })
       try {
         if (data.rpcName === "create_workspace") {
           const income = parseFloat(data.rpcArgs._income) || 0;
-          const res = await query("SELECT public.create_workspace($1::text, $2::numeric, $3::uuid) as workspace_id", [
-            data.rpcArgs._name,
+          const res = await query("SELECT public.create_workspace($1, $2, $3) as workspace_id", [
+            String(data.rpcArgs._name || "Meu espaço"),
             income,
-            userId
+            data.rpcArgs._user_id || userId
           ]);
           return res.rows[0].workspace_id;
         }

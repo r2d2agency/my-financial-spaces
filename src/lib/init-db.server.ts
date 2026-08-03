@@ -4,15 +4,8 @@ export async function initializeDatabase() {
   console.log("Checking database initialization...");
   
   try {
-    // Check if a basic table exists
-    const checkFunctions = await query(`
-      SELECT COUNT(*) as count FROM pg_proc 
-      WHERE proname IN ('create_workspace', 'list_ws_members', 'has_role')
-      AND pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public');
-    `);
-
     // Force re-run for now to ensure all missing tables are created if user is stuck
-    if (true || parseInt(checkFunctions.rows[0].count) < 3) {
+    if (true) {
       console.log("Database verification/initialization running...");
       
       // SQL for full schema initialization
@@ -296,11 +289,11 @@ export async function initializeDatabase() {
             VALUES (v_ws_id, _user_id, 'owner', true);
 
             -- 3. Obter ID do Plano (Individual por padrão)
-            SELECT id INTO v_plan_id FROM public.plans WHERE slug = 'individual';
+            SELECT id INTO v_plan_id FROM public.plans WHERE slug = 'individual' LIMIT 1;
 
             -- 4. Criar Assinatura (Trial)
             INSERT INTO public.subscriptions (workspace_id, plan_id, status, current_period_end)
-            VALUES (v_ws_id, v_plan_id, 'trialing', CURRENT_DATE + INTERVAL '30 days');
+            VALUES (v_ws_id, v_plan_id, 'trialing', (CURRENT_DATE + INTERVAL '30 days'));
 
             -- 5. Criar Categorias Padrão
             INSERT INTO public.categories (workspace_id, name, kind, color) VALUES
