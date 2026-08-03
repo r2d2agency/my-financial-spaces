@@ -7,7 +7,15 @@ import { dbQuery } from "./db.functions";
 export const db = {
   from: (table: string) => ({
     select: (columns: string = "*") => ({
+      execute: async () => {
+        const rows = await dbQuery({ data: { table, action: "select", columns } });
+        return { data: rows, error: null };
+      },
       eq: (col: string, val: any) => ({
+        execute: async () => {
+          const rows = await dbQuery({ data: { table, action: "select", columns, filters: { [col]: val } } });
+          return { data: rows, error: null };
+        },
         maybeSingle: async () => {
           const rows = await dbQuery({ data: { table, action: "select", columns, filters: { [col]: val }, limit: 1 } });
           return { data: rows[0] || null, error: null };
@@ -22,13 +30,12 @@ export const db = {
           lte: (col3: string, val3: any) => ({
              order: (orderBy: string, { ascending = true } = {}) => ({
                 execute: async () => {
-                  // Filtros compostos no backend
                   const rows = await dbQuery({ 
                     data: { 
                       table, 
                       action: "select", 
                       columns, 
-                      filters: { [col]: val }, // Apenas EQ por enquanto na implementação simplificada
+                      filters: { [col]: val }, 
                       orderBy, 
                       orderAsc: ascending 
                     } 
@@ -65,7 +72,6 @@ export const db = {
       }),
       in: (col: string, vals: any[]) => ({
         execute: async () => {
-          // Simplificação: o backend precisa suportar IN
           const count = await dbQuery({ data: { table, action: "update", data, filters: { [col]: vals } } });
           return { data: count, error: null };
         }
