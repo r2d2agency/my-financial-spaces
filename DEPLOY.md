@@ -6,8 +6,9 @@ Este app foi migrado de Supabase para **PostgreSQL Puro** rodando no seu EasyPan
 Use a sua `DATABASE_URL` no EasyPanel:
 `postgres://postgres:qx0hw7js8syz9axdmqf3@blaster_finace-gleego-bd:5432/finace-gleego-bd?sslmode=disable`
 
-## 2. Tabelas Necessárias
-Execute o script SQL abaixo no seu banco de dados para criar a estrutura completa (Auth, Business Logic e Sessões):
+## 2. Inicialização Automática
+O sistema agora inicializa as tabelas automaticamente no primeiro acesso após o deploy. Você não precisa mais executar o SQL manualmente no console, a menos que queira fazer ajustes finos.
+
 
 ```sql
 -- 1. ESTRUTURA AUTH (Simulação do schema auth do Supabase para compatibilidade local)
