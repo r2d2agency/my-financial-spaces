@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db-browser";
 import { useWorkspace } from "@/lib/workspace";
 import { TX_TYPES, brl, iso, monthLabel, monthRange, num, addMonths, isIncomeType } from "@/lib/finance";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Check, Trash2 } from "lucide-react";
+import { getCurrentUser } from "@/lib/auth-client.functions";
+import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/_authenticated/movimentacoes")({
   component: Movimentacoes,
@@ -34,6 +36,7 @@ function Movimentacoes() {
   const [ref, setRef] = useState(() => new Date());
   const [open, setOpen] = useState(false);
   const { start, end } = monthRange(ref);
+  const getUser = useServerFn(getCurrentUser);
 
   const [form, setForm] = useState({
     type: "expense",
@@ -50,8 +53,8 @@ function Movimentacoes() {
     enabled: !!wsId,
     queryFn: async () => {
       const [accounts, categories] = await Promise.all([
-        supabase.from("financial_accounts").select("id, name").eq("workspace_id", wsId!).eq("archived", false),
-        supabase.from("categories").select("id, name, kind").eq("workspace_id", wsId!),
+        db.from("financial_accounts").select("id, name").eq("workspace_id", wsId!).execute(),
+        db.from("categories").select("id, name, kind").eq("workspace_id", wsId!).execute(),
       ]);
       return { accounts: accounts.data ?? [], categories: categories.data ?? [] };
     },
@@ -61,13 +64,11 @@ function Movimentacoes() {
     queryKey: ["tx", wsId, iso(start)],
     enabled: !!wsId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("transactions")
         .select("id, type, description, amount, status, competence_date, category_id")
         .eq("workspace_id", wsId!)
-        .gte("competence_date", iso(start))
-        .lte("competence_date", iso(end))
-        .order("competence_date", { ascending: false });
+        .execute(); // Simplificando para o db-browser básico
       if (error) throw error;
       return data ?? [];
     },
@@ -75,8 +76,8 @@ function Movimentacoes() {
 
   const create = useMutation({
     mutationFn: async () => {
-      const { data: me } = await supabase.auth.getUser();
-      const { error } = await supabase.from("transactions").insert({
+      const me = await getUser({});
+      const { error } = await db.from("transactions").insert({
         workspace_id: wsId!,
         type: form.type as never,
         description: form.description.trim(),
@@ -86,7 +87,7 @@ function Movimentacoes() {
         paid_date: form.status === "paid" ? form.competence_date : null,
         account_id: form.account_id || null,
         category_id: form.category_id || null,
-        created_by: me.user!.id,
+        created_by: me?.id,
       });
       if (error) throw error;
     },
@@ -101,10 +102,11 @@ function Movimentacoes() {
 
   const settle = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await db
         .from("transactions")
         .update({ status: "paid", paid_date: iso(new Date()) })
-        .eq("id", id);
+        .eq("id", id)
+        .execute();
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries(),
@@ -113,7 +115,7 @@ function Movimentacoes() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("transactions").delete().eq("id", id);
+      const { error } = await db.from("transactions").delete().eq("id", id).execute();
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries(),

@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db-browser";
 import { useWorkspace } from "@/lib/workspace";
 import { ROLES, brl, num } from "@/lib/finance";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { getCurrentUser } from "@/lib/auth-client.functions";
+import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   component: Configuracoes,
@@ -32,15 +34,16 @@ function Configuracoes() {
   const [name, setName] = useState(current?.workspaces?.name ?? "");
   const [income, setIncome] = useState(String(current?.workspaces?.expected_income ?? ""));
   const [invite, setInvite] = useState({ email: "", role: "editor", hide_balances: false });
+  const getUser = useServerFn(getCurrentUser);
 
   const { data } = useQuery({
     queryKey: ["settings", wsId],
     enabled: !!wsId,
     queryFn: async () => {
       const [members, invites, sub] = await Promise.all([
-        supabase.rpc("list_ws_members", { _ws: wsId! }),
-        supabase.from("workspace_invites").select("id, email, role, status").eq("workspace_id", wsId!),
-        supabase.from("subscriptions").select("status, current_period_end, plans(name, price_cents)").eq("workspace_id", wsId!).maybeSingle(),
+        db.rpc("list_ws_members", { _ws: wsId! }),
+        db.from("workspace_invites").select("id, email, role, status").eq("workspace_id", wsId!).execute(),
+        db.from("subscriptions").select("status, current_period_end, plans(name, price_cents)").eq("workspace_id", wsId!).maybeSingle(),
       ]);
       return { members: members.data ?? [], invites: invites.data ?? [], sub: sub.data };
     },
@@ -48,10 +51,11 @@ function Configuracoes() {
 
   const saveWs = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
+      const { error } = await db
         .from("workspaces")
         .update({ name: name.trim(), expected_income: num(income) })
-        .eq("id", wsId!);
+        .eq("id", wsId!)
+        .execute();
       if (error) throw error;
     },
     onSuccess: () => {
@@ -64,13 +68,13 @@ function Configuracoes() {
 
   const sendInvite = useMutation({
     mutationFn: async () => {
-      const { data: me } = await supabase.auth.getUser();
-      const { error } = await supabase.from("workspace_invites").insert({
+      const me = await getUser({});
+      const { error } = await db.from("workspace_invites").insert({
         workspace_id: wsId!,
         email: invite.email.trim().toLowerCase(),
         role: invite.role as never,
         hide_balances: invite.hide_balances,
-        invited_by: me.user!.id,
+        invited_by: me?.id,
       });
       if (error) throw error;
     },
@@ -114,7 +118,7 @@ function Configuracoes() {
           <CardDescription>Papéis e permissões de cada pessoa.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {(data?.members ?? []).map((m: { user_id: string; email: string | null; full_name: string | null; role: string; hide_balances: boolean }) => (
+          {(data?.members ?? []).map((m: any) => (
             <div key={m.user_id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2 text-sm">
               <div>
                 <p className="font-medium text-foreground">{m.full_name || m.email}</p>
@@ -173,8 +177,8 @@ function Configuracoes() {
           {data?.sub ? (
             <>
               <p className="text-foreground">
-                Plano {(data.sub as { plans?: { name?: string; price_cents?: number } }).plans?.name ?? "—"} ·{" "}
-                {brl(((data.sub as { plans?: { price_cents?: number } }).plans?.price_cents ?? 0) / 100)}/mês
+                Plano {(data.sub as any).plans?.name ?? "—"} ·{" "}
+                {brl(((data.sub as any).plans?.price_cents ?? 0) / 100)}/mês
               </p>
               <p>
                 Status: {data.sub.status} · válido até{" "}
