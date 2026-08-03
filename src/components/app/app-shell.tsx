@@ -28,6 +28,7 @@ import {
   Bell,
   ShieldCheck,
 } from "lucide-react";
+import { QuickTransaction } from "./quick-transaction";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -218,7 +219,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
           )}
         </div>
-        <main className="min-w-0 flex-1 p-4 sm:p-6">{children}</main>
+        <main className="min-w-0 flex-1 p-4 sm:p-6">
+          {children}
+          <QuickTransaction />
+        </main>
       </div>
     </div>
   );
