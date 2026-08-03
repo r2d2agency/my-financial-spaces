@@ -39,7 +39,7 @@ export async function adminClient() {
     }),
     rpc: async (fn: string, params: any) => {
        if (fn === 'has_role') {
-          const res = await query(`SELECT public.has_role($1, $2)`, [params._user_id, params._role]);
+          const res = await query(`SELECT public.has_role($1::uuid, $2::public.app_role) as has_role`, [params._user_id, params._role]);
           return { data: res.rows[0]?.has_role || false, error: null };
        }
        return { data: null, error: new Error('RPC not implemented') };

@@ -6,11 +6,11 @@ export async function initializeDatabase() {
   try {
     // Check if a basic table exists
     const checkTable = await query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'plans'
-      );
+      SELECT (
+        SELECT COUNT(*) FROM pg_proc 
+        WHERE proname IN ('create_workspace', 'list_ws_members', 'has_role')
+        AND pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')
+      ) = 3 as exists;
     `);
 
     if (!checkTable.rows[0].exists) {
@@ -237,6 +237,82 @@ export async function initializeDatabase() {
          ('premium', 'Premium', 6990, 5, 10, 50),
          ('profissional', 'Profissional', 12990, 50, 50, 200)
         ON CONFLICT (slug) DO NOTHING;
+
+        -- 6. FUNÇÃO CREATE_WORKSPACE
+        CREATE OR REPLACE FUNCTION public.create_workspace(_name TEXT, _expected_income NUMERIC, _user_id UUID)
+        RETURNS UUID AS $$
+        DECLARE
+            v_ws_id UUID;
+            v_plan_id UUID;
+        BEGIN
+            -- 1. Criar Workspace
+            INSERT INTO public.workspaces (name, owner_id, expected_income)
+            VALUES (_name, _user_id, _expected_income)
+            RETURNING id INTO v_ws_id;
+
+            -- 2. Adicionar como Owner
+            INSERT INTO public.workspace_members (workspace_id, user_id, role, can_invite)
+            VALUES (v_ws_id, _user_id, 'owner', true);
+
+            -- 3. Obter ID do Plano (Individual por padrão)
+            SELECT id INTO v_plan_id FROM public.plans WHERE slug = 'individual';
+
+            -- 4. Criar Assinatura (Trial)
+            INSERT INTO public.subscriptions (workspace_id, plan_id, status, current_period_end)
+            VALUES (v_ws_id, v_plan_id, 'trialing', CURRENT_DATE + INTERVAL '30 days');
+
+            -- 5. Criar Categorias Padrão
+            INSERT INTO public.categories (workspace_id, name, kind, color) VALUES
+            (v_ws_id, 'Aluguel / Hipoteca', 'expense', '#ef4444'),
+            (v_ws_id, 'Energia', 'expense', '#eab308'),
+            (v_ws_id, 'Água', 'expense', '#3b82f6'),
+            (v_ws_id, 'Internet', 'expense', '#8b5cf6'),
+            (v_ws_id, 'Supermercado', 'expense', '#22c55e'),
+            (v_ws_id, 'Salário', 'income', '#10b981'),
+            (v_ws_id, 'Freelance', 'income', '#6366f1');
+
+            RETURN v_ws_id;
+        END;
+        $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+        -- 8. FUNÇÃO HAS_ROLE
+        CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role public.app_role)
+        RETURNS BOOLEAN AS $$
+        BEGIN
+            RETURN EXISTS (
+                SELECT 1 FROM public.user_roles
+                WHERE user_id = _user_id AND role = _role
+            );
+        END;
+        $$ LANGUAGE plpgsql SECURITY DEFINER;
+      
+
+        -- 7. FUNÇÃO LIST_WS_MEMBERS
+        CREATE OR REPLACE FUNCTION public.list_ws_members(_ws UUID)
+        RETURNS TABLE (
+            id UUID,
+            workspace_id UUID,
+            user_id UUID,
+            role public.workspace_role,
+            hide_balances BOOLEAN,
+            can_invite BOOLEAN,
+            created_at TIMESTAMPTZ,
+            email TEXT,
+            full_name TEXT
+        ) AS $$
+        BEGIN
+            RETURN QUERY
+            SELECT 
+                m.id, m.workspace_id, m.user_id, m.role, m.hide_balances, m.can_invite, m.created_at,
+                p.email, p.full_name
+            FROM public.workspace_members m
+            JOIN public.profiles p ON p.id = m.user_id
+            WHERE m.workspace_id = _ws;
+        END;
+        $$ LANGUAGE plpgsql SECURITY DEFINER;
+      
+      
+      
       `;
 
       await query(sql);

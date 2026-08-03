@@ -99,15 +99,15 @@ export const dbQuery = createServerFn({ method: "POST" })
 
     if (data.action === "rpc") {
       if (data.rpcName === "create_workspace") {
-        const res = await query("SELECT public.create_workspace($1, $2, $3)", [
+        const res = await query("SELECT public.create_workspace($1::text, $2::numeric, $3::uuid) as workspace_id", [
           data.rpcArgs._name,
           data.rpcArgs._income,
           userId
         ]);
-        return res.rows[0].create_workspace;
+        return res.rows[0].workspace_id;
       }
       if (data.rpcName === "list_ws_members") {
-        const res = await query("SELECT * FROM public.list_ws_members($1)", [data.rpcArgs._ws]);
+        const res = await query("SELECT * FROM public.list_ws_members($1::uuid)", [data.rpcArgs._ws]);
         return res.rows;
       }
     }
