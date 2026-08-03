@@ -52,8 +52,10 @@ const plans = [
 
 function Landing() {
   const [logged, setLogged] = useState(false);
+
   useEffect(() => {
-    supabase.auth?.getSession()?.then(({ data }: any) => setLogged(!!data?.session));
+    const token = localStorage.getItem("auth_token");
+    setLogged(!!token);
   }, []);
 
   return (
