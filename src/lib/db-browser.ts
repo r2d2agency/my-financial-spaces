@@ -61,7 +61,7 @@ export const db = {
         this.limitVal = 1;
         const rows = await dbQuery({ 
           data: { 
-            table: this.table, 
+            table, 
             action: "select", 
             columns: this.columns, 
             filters: this.filters, 
@@ -74,7 +74,7 @@ export const db = {
       async execute() {
         const rows = await dbQuery({ 
           data: { 
-            table: this.table, 
+            table, 
             action: this.action, 
             columns: this.columns, 
             filters: this.filters, 
@@ -99,7 +99,7 @@ export const db = {
       },
 
       insert: async (data: any) => {
-        const row = await dbQuery({ data: { table: this.table, action: "insert", data } });
+        const row = await dbQuery({ data: { table, action: "insert", data } });
         return { data: row, error: null };
       }
     };
