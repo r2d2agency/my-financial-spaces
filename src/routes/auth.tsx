@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db-browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,9 +38,8 @@ function AuthPage() {
   const doSignIn = useServerFn(localSignIn);
 
   useEffect(() => {
-    supabase.auth?.getSession()?.then(({ data }: any) => {
-      if (data?.session) navigate({ to: "/dashboard", replace: true });
-    });
+    const token = localStorage.getItem("auth_token");
+    if (token) navigate({ to: "/dashboard", replace: true });
   }, [navigate]);
 
   const submit = async (e: React.FormEvent) => {
@@ -64,11 +63,7 @@ function AuthPage() {
   };
 
   const google = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin },
-    });
-    if (error) toast.error(error.message);
+    toast.error("Login social não configurado no servidor local. Use e-mail e senha.");
   };
 
   return (
