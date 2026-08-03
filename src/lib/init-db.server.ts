@@ -274,6 +274,31 @@ export async function initializeDatabase() {
             RETURN v_ws_id;
         END;
         $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+        -- 7. FUNÇÃO LIST_WS_MEMBERS
+        CREATE OR REPLACE FUNCTION public.list_ws_members(_ws UUID)
+        RETURNS TABLE (
+            id UUID,
+            workspace_id UUID,
+            user_id UUID,
+            role public.workspace_role,
+            hide_balances BOOLEAN,
+            can_invite BOOLEAN,
+            created_at TIMESTAMPTZ,
+            email TEXT,
+            full_name TEXT
+        ) AS $$
+        BEGIN
+            RETURN QUERY
+            SELECT 
+                m.id, m.workspace_id, m.user_id, m.role, m.hide_balances, m.can_invite, m.created_at,
+                p.email, p.full_name
+            FROM public.workspace_members m
+            JOIN public.profiles p ON p.id = m.user_id
+            WHERE m.workspace_id = _ws;
+        END;
+        $$ LANGUAGE plpgsql SECURITY DEFINER;
+      
       
       
       `;
