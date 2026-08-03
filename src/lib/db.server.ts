@@ -6,7 +6,7 @@ let pool: pg.Pool | undefined;
 export function getPool() {
   if (pool) return pool;
 
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString = process.env['DATABASE_URL'];
 
   if (!connectionString) {
     throw new Error('Variável de ambiente DATABASE_URL não configurada.');
