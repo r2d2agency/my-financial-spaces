@@ -229,136 +229,235 @@ function Onboarding() {
               </>
             )}
 
-            {step === 1 &&
-              accounts.map((a, i) => (
-                <div key={i} className="grid gap-2 sm:grid-cols-3">
-                  <Input
-                    placeholder="Nome"
-                    value={a.name}
-                    onChange={(e) =>
-                      setAccounts((p) => p.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))
-                    }
-                  />
-                  <Select
-                    value={a.kind}
-                    onValueChange={(v) => setAccounts((p) => p.map((x, j) => (j === i ? { ...x, kind: v } : x)))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ACCOUNT_KINDS.map((k) => (
-                        <SelectItem key={k.value} value={k.value}>
-                          {k.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    placeholder="Saldo inicial"
-                    type="number"
-                    step="0.01"
-                    value={a.initial_balance}
-                    onChange={(e) =>
-                      setAccounts((p) => p.map((x, j) => (j === i ? { ...x, initial_balance: e.target.value } : x)))
-                    }
-                  />
-                </div>
-              ))}
             {step === 1 && (
-              <Button variant="outline" size="sm" onClick={() => setAccounts((p) => [...p, { name: "", kind: "checking", initial_balance: "" }])}>
-                + Adicionar conta
-              </Button>
+              <div className="space-y-4">
+                <div className="hidden grid-cols-3 gap-2 px-1 text-xs font-medium text-muted-foreground sm:grid">
+                  <span>Nome da Conta</span>
+                  <span>Tipo de Conta</span>
+                  <span>Saldo Atual</span>
+                </div>
+                {accounts.map((a, i) => (
+                  <div key={i} className="grid gap-2 sm:grid-cols-3">
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">Nome da Conta</Label>
+                      <Input
+                        placeholder="Ex: Nubank, Carteira..."
+                        value={a.name}
+                        onChange={(e) =>
+                          setAccounts((p) => p.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">Tipo</Label>
+                      <Select
+                        value={a.kind}
+                        onValueChange={(v) => setAccounts((p) => p.map((x, j) => (j === i ? { ...x, kind: v } : x)))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ACCOUNT_KINDS.map((k) => (
+                            <SelectItem key={k.value} value={k.value}>
+                              {k.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">Saldo Inicial</Label>
+                      <Input
+                        placeholder="0,00"
+                        type="number"
+                        step="0.01"
+                        value={a.initial_balance}
+                        onChange={(e) =>
+                          setAccounts((p) => p.map((x, j) => (j === i ? { ...x, initial_balance: e.target.value } : x)))
+                        }
+                      />
+                    </div>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={() => setAccounts((p) => [...p, { name: "", kind: "checking", initial_balance: "" }])}>
+                  + Adicionar conta
+                </Button>
+              </div>
             )}
 
-            {step === 2 &&
-              cards.map((c, i) => (
-                <div key={i} className="grid gap-2 sm:grid-cols-4">
-                  <Input placeholder="Cartão" value={c.name} onChange={(e) => setCards((p) => p.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
-                  <Input placeholder="Limite" type="number" value={c.credit_limit} onChange={(e) => setCards((p) => p.map((x, j) => (j === i ? { ...x, credit_limit: e.target.value } : x)))} />
-                  <Input placeholder="Fechamento" type="number" value={c.closing_day} onChange={(e) => setCards((p) => p.map((x, j) => (j === i ? { ...x, closing_day: e.target.value } : x)))} />
-                  <Input placeholder="Vencimento" type="number" value={c.due_day} onChange={(e) => setCards((p) => p.map((x, j) => (j === i ? { ...x, due_day: e.target.value } : x)))} />
-                </div>
-              ))}
             {step === 2 && (
-              <Button variant="outline" size="sm" onClick={() => setCards((p) => [...p, { name: "", credit_limit: "", closing_day: "1", due_day: "10" }])}>
-                + Adicionar cartão
-              </Button>
+              <div className="space-y-4">
+                <div className="hidden grid-cols-4 gap-2 px-1 text-xs font-medium text-muted-foreground sm:grid">
+                  <span>Nome do Cartão</span>
+                  <span>Limite (R$)</span>
+                  <span>Fechamento (Dia)</span>
+                  <span>Vencimento (Dia)</span>
+                </div>
+                {cards.map((c, i) => (
+                  <div key={i} className="grid gap-2 sm:grid-cols-4">
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">Nome</Label>
+                      <Input placeholder="Ex: Visa Gold" value={c.name} onChange={(e) => setCards((p) => p.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
+                    </div>
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">Limite</Label>
+                      <Input placeholder="0,00" type="number" value={c.credit_limit} onChange={(e) => setCards((p) => p.map((x, j) => (j === i ? { ...x, credit_limit: e.target.value } : x)))} />
+                    </div>
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">Dia Fechamento</Label>
+                      <Input placeholder="1 a 31" type="number" min="1" max="31" value={c.closing_day} onChange={(e) => setCards((p) => p.map((x, j) => (j === i ? { ...x, closing_day: e.target.value } : x)))} />
+                    </div>
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">Dia Vencimento</Label>
+                      <Input placeholder="1 a 31" type="number" min="1" max="31" value={c.due_day} onChange={(e) => setCards((p) => p.map((x, j) => (j === i ? { ...x, due_day: e.target.value } : x)))} />
+                    </div>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={() => setCards((p) => [...p, { name: "", credit_limit: "", closing_day: "1", due_day: "10" }])}>
+                  + Adicionar cartão
+                </Button>
+              </div>
             )}
 
-            {step === 3 &&
-              fixed.map((f, i) => (
-                <div key={i} className="grid gap-2 sm:grid-cols-3">
-                  <Input placeholder="Descrição" value={f.description} onChange={(e) => setFixed((p) => p.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)))} />
-                  <Input placeholder="Valor" type="number" step="0.01" value={f.amount} onChange={(e) => setFixed((p) => p.map((x, j) => (j === i ? { ...x, amount: e.target.value } : x)))} />
-                  <Input placeholder="Dia" type="number" value={f.day_of_month} onChange={(e) => setFixed((p) => p.map((x, j) => (j === i ? { ...x, day_of_month: e.target.value } : x)))} />
-                </div>
-              ))}
             {step === 3 && (
-              <Button variant="outline" size="sm" onClick={() => setFixed((p) => [...p, { description: "", amount: "", day_of_month: "5" }])}>
-                + Adicionar despesa fixa
-              </Button>
+              <div className="space-y-4">
+                <div className="hidden grid-cols-3 gap-2 px-1 text-xs font-medium text-muted-foreground sm:grid">
+                  <span>Descrição (Ex: Aluguel)</span>
+                  <span>Valor (R$)</span>
+                  <span>Dia do Vencimento</span>
+                </div>
+                {fixed.map((f, i) => (
+                  <div key={i} className="grid gap-2 sm:grid-cols-3">
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">Descrição</Label>
+                      <Input placeholder="Ex: Internet, Luz..." value={f.description} onChange={(e) => setFixed((p) => p.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)))} />
+                    </div>
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">Valor</Label>
+                      <Input placeholder="0,00" type="number" step="0.01" value={f.amount} onChange={(e) => setFixed((p) => p.map((x, j) => (j === i ? { ...x, amount: e.target.value } : x)))} />
+                    </div>
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">Dia Vencimento</Label>
+                      <Input placeholder="1 a 31" type="number" value={f.day_of_month} onChange={(e) => setFixed((p) => p.map((x, j) => (j === i ? { ...x, day_of_month: e.target.value } : x)))} />
+                    </div>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={() => setFixed((p) => [...p, { description: "", amount: "", day_of_month: "5" }])}>
+                  + Adicionar despesa fixa
+                </Button>
+              </div>
             )}
 
-            {step === 4 &&
-              debts.map((d, i) => (
-                <div key={i} className="grid gap-2 sm:grid-cols-5">
-                  <Input placeholder="Dívida" value={d.name} onChange={(e) => setDebts((p) => p.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
-                  <Input placeholder="Saldo" type="number" value={d.outstanding} onChange={(e) => setDebts((p) => p.map((x, j) => (j === i ? { ...x, outstanding: e.target.value } : x)))} />
-                  <Input placeholder="Parcela" type="number" value={d.installment_amount} onChange={(e) => setDebts((p) => p.map((x, j) => (j === i ? { ...x, installment_amount: e.target.value } : x)))} />
-                  <Input placeholder="Nº parcelas" type="number" value={d.installments_total} onChange={(e) => setDebts((p) => p.map((x, j) => (j === i ? { ...x, installments_total: e.target.value } : x)))} />
-                  <Input placeholder="Dia venc." type="number" value={d.due_day} onChange={(e) => setDebts((p) => p.map((x, j) => (j === i ? { ...x, due_day: e.target.value } : x)))} />
-                </div>
-              ))}
             {step === 4 && (
-              <Button variant="outline" size="sm" onClick={() => setDebts((p) => [...p, { name: "", outstanding: "", installment_amount: "", installments_total: "12", due_day: "10" }])}>
-                + Adicionar dívida
-              </Button>
+              <div className="space-y-4">
+                <div className="hidden grid-cols-5 gap-2 px-1 text-xs font-medium text-muted-foreground sm:grid">
+                  <span>Nome/Dívida</span>
+                  <span>Saldo Devedor</span>
+                  <span>Valor Parcela</span>
+                  <span>Total Parcelas</span>
+                  <span>Vencimento</span>
+                </div>
+                {debts.map((d, i) => (
+                  <div key={i} className="grid gap-2 sm:grid-cols-5">
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">Dívida</Label>
+                      <Input placeholder="Ex: Financiamento" value={d.name} onChange={(e) => setDebts((p) => p.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
+                    </div>
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">Saldo Total</Label>
+                      <Input placeholder="0,00" type="number" value={d.outstanding} onChange={(e) => setDebts((p) => p.map((x, j) => (j === i ? { ...x, outstanding: e.target.value } : x)))} />
+                    </div>
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">Parcela</Label>
+                      <Input placeholder="0,00" type="number" value={d.installment_amount} onChange={(e) => setDebts((p) => p.map((x, j) => (j === i ? { ...x, installment_amount: e.target.value } : x)))} />
+                    </div>
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">Nº Parc.</Label>
+                      <Input placeholder="Ex: 12" type="number" value={d.installments_total} onChange={(e) => setDebts((p) => p.map((x, j) => (j === i ? { ...x, installments_total: e.target.value } : x)))} />
+                    </div>
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">Dia</Label>
+                      <Input placeholder="1-31" type="number" value={d.due_day} onChange={(e) => setDebts((p) => p.map((x, j) => (j === i ? { ...x, due_day: e.target.value } : x)))} />
+                    </div>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={() => setDebts((p) => [...p, { name: "", outstanding: "", installment_amount: "", installments_total: "12", due_day: "10" }])}>
+                  + Adicionar dívida
+                </Button>
+              </div>
             )}
 
-            {step === 5 &&
-              invites.map((iv, i) => (
-                <div key={i} className="grid gap-2 sm:grid-cols-3">
-                  <Input placeholder="E-mail" type="email" value={iv.email} onChange={(e) => setInvites((p) => p.map((x, j) => (j === i ? { ...x, email: e.target.value } : x)))} />
-                  <Select value={iv.role} onValueChange={(v) => setInvites((p) => p.map((x, j) => (j === i ? { ...x, role: v } : x)))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ROLES.filter((r) => r.value !== "owner").map((r) => (
-                        <SelectItem key={r.value} value={r.value}>
-                          {r.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      checked={iv.hide_balances}
-                      onChange={(e) => setInvites((p) => p.map((x, j) => (j === i ? { ...x, hide_balances: e.target.checked } : x)))}
-                    />
-                    Ocultar saldos
-                  </label>
-                </div>
-              ))}
             {step === 5 && (
-              <Button variant="outline" size="sm" onClick={() => setInvites((p) => [...p, { email: "", role: "editor", hide_balances: false }])}>
-                + Convidar pessoa
-              </Button>
+              <div className="space-y-4">
+                <div className="hidden grid-cols-3 gap-2 px-1 text-xs font-medium text-muted-foreground sm:grid">
+                  <span>E-mail do convidado</span>
+                  <span>Perfil / Permissão</span>
+                  <span>Privacidade</span>
+                </div>
+                {invites.map((iv, i) => (
+                  <div key={i} className="grid gap-2 sm:grid-cols-3">
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">E-mail</Label>
+                      <Input placeholder="Ex: contato@email.com" type="email" value={iv.email} onChange={(e) => setInvites((p) => p.map((x, j) => (j === i ? { ...x, email: e.target.value } : x)))} />
+                    </div>
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">Permissão</Label>
+                      <Select value={iv.role} onValueChange={(v) => setInvites((p) => p.map((x, j) => (j === i ? { ...x, role: v } : x)))}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ROLES.filter((r) => r.value !== "owner").map((r) => (
+                            <SelectItem key={r.value} value={r.value}>
+                              {r.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-2 pt-1 sm:pt-0">
+                      <input
+                        type="checkbox"
+                        id={`hide-${i}`}
+                        checked={iv.hide_balances}
+                        onChange={(e) => setInvites((p) => p.map((x, j) => (j === i ? { ...x, hide_balances: e.target.checked } : x)))}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <Label htmlFor={`hide-${i}`} className="cursor-pointer text-xs text-muted-foreground">
+                        Ocultar saldos financeiros
+                      </Label>
+                    </div>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={() => setInvites((p) => [...p, { email: "", role: "editor", hide_balances: false }])}>
+                  + Convidar pessoa
+                </Button>
+              </div>
             )}
 
-            {step === 6 &&
-              goals.map((g, i) => (
-                <div key={i} className="grid gap-2 sm:grid-cols-2">
-                  <Input placeholder="Meta" value={g.name} onChange={(e) => setGoals((p) => p.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
-                  <Input placeholder="Valor alvo" type="number" value={g.target_amount} onChange={(e) => setGoals((p) => p.map((x, j) => (j === i ? { ...x, target_amount: e.target.value } : x)))} />
-                </div>
-              ))}
             {step === 6 && (
-              <Button variant="outline" size="sm" onClick={() => setGoals((p) => [...p, { name: "", target_amount: "" }])}>
-                + Adicionar meta
-              </Button>
+              <div className="space-y-4">
+                <div className="hidden grid-cols-2 gap-2 px-1 text-xs font-medium text-muted-foreground sm:grid">
+                  <span>Nome da Meta (Ex: Viagem)</span>
+                  <span>Valor Alvo (R$)</span>
+                </div>
+                {goals.map((g, i) => (
+                  <div key={i} className="grid gap-2 sm:grid-cols-2">
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">Nome da Meta</Label>
+                      <Input placeholder="Ex: Reserva de Emergência" value={g.name} onChange={(e) => setGoals((p) => p.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
+                    </div>
+                    <div className="space-y-1 sm:space-y-0">
+                      <Label className="text-[10px] uppercase sm:hidden">Valor Objetivo</Label>
+                      <Input placeholder="0,00" type="number" value={g.target_amount} onChange={(e) => setGoals((p) => p.map((x, j) => (j === i ? { ...x, target_amount: e.target.value } : x)))} />
+                    </div>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={() => setGoals((p) => [...p, { name: "", target_amount: "" }])}>
+                  + Adicionar meta
+                </Button>
+              </div>
             )}
 
             <div className="flex justify-between pt-4">
