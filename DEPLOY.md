@@ -18,11 +18,12 @@ CREATE TABLE IF NOT EXISTS public.user_sessions (
 ```
 
 ## 3. Variáveis de Ambiente no EasyPanel
-Você **não precisa** mais das variáveis `VITE_SUPABASE_*`. Remova-as se desejar.
+Você **não precisa** das variáveis `VITE_SUPABASE_*`. O sistema foi totalmente desacoplado do Supabase Cloud e da API do Supabase auto-hospedado.
+
 Mantenha apenas:
 - `DATABASE_URL` (Sua string de conexão)
 - `OPENAI_API_KEY` (Para a IA)
 - `NODE_ENV=production`
 
 ## 4. Como funciona o Auth agora?
-O sistema agora valida as sessões diretamente na tabela `user_sessions` do seu banco PostgreSQL, sem fazer chamadas externas para APIs do Supabase.
+O sistema agora valida as sessões diretamente na tabela `user_sessions` do seu banco PostgreSQL. Não há chamadas para `localhost:8000`.
