@@ -48,23 +48,23 @@ function Relatorios() {
   const months = Array.from({ length: 6 }, (_, i) => addMonths(now, -5 + i));
   const series = months.map((m) => {
     const key = iso(m).slice(0, 7);
-    const items = (data?.tx ?? []).filter((t) => t.competence_date.startsWith(key));
+    const items = ((data as any)?.tx ?? []).filter((t: any) => t.competence_date.startsWith(key));
     return {
       mes: monthLabel(m).slice(0, 3),
-      receitas: items.filter((t) => isIncomeType(t.type)).reduce((s, t) => s + num(t.amount), 0),
-      despesas: items.filter((t) => !isIncomeType(t.type) && t.type !== "transfer").reduce((s, t) => s + num(t.amount), 0),
+      receitas: items.filter((t: any) => isIncomeType(t.type)).reduce((s: number, t: any) => s + num(t.amount), 0),
+      despesas: items.filter((t: any) => !isIncomeType(t.type) && t.type !== "transfer").reduce((s: number, t: any) => s + num(t.amount), 0),
     };
   });
 
-  const byCat = (data?.cats ?? [])
-    .map((c) => ({
+  const byCat = ((data as any)?.cats ?? [])
+    .map((c: any) => ({
       name: c.name,
-      value: (data?.tx ?? [])
-        .filter((t) => t.category_id === c.id && !isIncomeType(t.type) && t.type !== "transfer")
-        .reduce((s, t) => s + num(t.amount), 0),
+      value: ((data as any)?.tx ?? [])
+        .filter((t: any) => t.category_id === c.id && !isIncomeType(t.type) && t.type !== "transfer")
+        .reduce((s: number, t: any) => s + num(t.amount), 0),
     }))
-    .filter((c) => c.value > 0)
-    .sort((a, b) => b.value - a.value)
+    .filter((c: any) => c.value > 0)
+    .sort((a: any, b: any) => b.value - a.value)
     .slice(0, 8);
 
   return (
@@ -101,7 +101,7 @@ function Relatorios() {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie data={byCat} dataKey="value" nameKey="name" outerRadius={110} label>
-                  {byCat.map((_, i) => (
+                  {byCat.map((_: any, i: number) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
                 </Pie>

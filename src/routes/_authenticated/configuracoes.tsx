@@ -126,7 +126,7 @@ function Configuracoes() {
               </div>
             </div>
           ))}
-          {(data?.invites ?? []).filter((i) => i.status === "pending").map((i) => (
+          {(data?.invites ?? []).filter((i: any) => i.status === "pending").map((i: any) => (
             <div key={i.id} className="flex items-center justify-between text-sm text-muted-foreground">
               <span>{i.email}</span>
               <Badge variant="outline">convite pendente · {i.role}</Badge>

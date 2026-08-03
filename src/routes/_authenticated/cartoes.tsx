@@ -114,8 +114,8 @@ function Cartoes() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {(data?.cards ?? []).length === 0 && <p className="text-sm text-muted-foreground">Nenhum cartão cadastrado.</p>}
-        {(data?.cards ?? []).map((c) => {
-          const used = (data?.tx ?? []).filter((t) => t.card_id === c.id && t.status === "pending").reduce((s, t) => s + num(t.amount), 0);
+        {(data?.cards ?? []).map((c: any) => {
+          const used = ((data as any)?.tx ?? []).filter((t: any) => t.card_id === c.id && t.status === "pending").reduce((s: number, t: any) => s + num(t.amount), 0);
           const pct = num(c.credit_limit) > 0 ? (used / num(c.credit_limit)) * 100 : 0;
           return (
             <Card key={c.id}>

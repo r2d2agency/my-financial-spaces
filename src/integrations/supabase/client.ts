@@ -6,8 +6,8 @@ function createSupabaseClient() {
   const SUPABASE_PUBLISHABLE_KEY = import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'] || process.env['SUPABASE_PUBLISHABLE_KEY'];
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-     console.warn('[Database] Chaves do Supabase ausentes. O app tentará usar conexão direta PostgreSQL no servidor.');
-     return createClient<Database>('http://localhost:8000', 'dummy-key');
+    // Retorna cliente nulo para evitar erros de inicialização no frontend
+    return {} as any;
   }
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {

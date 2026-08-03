@@ -53,7 +53,7 @@ const plans = [
 function Landing() {
   const [logged, setLogged] = useState(false);
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setLogged(!!data.session));
+    supabase.auth?.getSession()?.then(({ data }: any) => setLogged(!!data?.session));
   }, []);
 
   return (
