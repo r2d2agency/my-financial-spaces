@@ -28,36 +28,52 @@ export async function initializeDatabase() {
 
         -- 2. SCHEMAS E ENUMS
         DO $$ BEGIN
-            CREATE TYPE public.workspace_role AS ENUM ('owner','admin','editor','viewer','consultant');
-        EXCEPTION WHEN duplicate_object THEN null; END $$;
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'workspace_role') THEN
+                CREATE TYPE public.workspace_role AS ENUM ('owner','admin','editor','viewer','consultant');
+            END IF;
+        END $$;
 
         DO $$ BEGIN
-            CREATE TYPE public.app_role AS ENUM ('platform_admin','support');
-        EXCEPTION WHEN duplicate_object THEN null; END $$;
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'app_role') THEN
+                CREATE TYPE public.app_role AS ENUM ('platform_admin','support');
+            END IF;
+        END $$;
 
         DO $$ BEGIN
-            CREATE TYPE public.account_kind AS ENUM ('checking','savings','wallet','cash','investment');
-        EXCEPTION WHEN duplicate_object THEN null; END $$;
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'account_kind') THEN
+                CREATE TYPE public.account_kind AS ENUM ('checking','savings','wallet','cash','investment');
+            END IF;
+        END $$;
 
         DO $$ BEGIN
-            CREATE TYPE public.tx_type AS ENUM ('income','expense','transfer','refund','debt_payment','card_payment','adjustment');
-        EXCEPTION WHEN duplicate_object THEN null; END $$;
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tx_type') THEN
+                CREATE TYPE public.tx_type AS ENUM ('income','expense','transfer','refund','debt_payment','card_payment','adjustment');
+            END IF;
+        END $$;
 
         DO $$ BEGIN
-            CREATE TYPE public.tx_status AS ENUM ('pending','paid');
-        EXCEPTION WHEN duplicate_object THEN null; END $$;
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tx_status') THEN
+                CREATE TYPE public.tx_status AS ENUM ('pending','paid');
+            END IF;
+        END $$;
 
         DO $$ BEGIN
-            CREATE TYPE public.debt_status AS ENUM ('active','paid','renegotiated');
-        EXCEPTION WHEN duplicate_object THEN null; END $$;
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'debt_status') THEN
+                CREATE TYPE public.debt_status AS ENUM ('active','paid','renegotiated');
+            END IF;
+        END $$;
 
         DO $$ BEGIN
-            CREATE TYPE public.subscription_status AS ENUM ('trialing','active','past_due','canceled','suspended');
-        EXCEPTION WHEN duplicate_object THEN null; END $$;
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'subscription_status') THEN
+                CREATE TYPE public.subscription_status AS ENUM ('trialing','active','past_due','canceled','suspended');
+            END IF;
+        END $$;
 
         DO $$ BEGIN
-            CREATE TYPE public.invite_status AS ENUM ('pending','accepted','revoked');
-        EXCEPTION WHEN duplicate_object THEN null; END $$;
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'invite_status') THEN
+                CREATE TYPE public.invite_status AS ENUM ('pending','accepted','revoked');
+            END IF;
+        END $$;
 
         -- 3. TABELAS DE NEGÓCIO
         CREATE TABLE IF NOT EXISTS public.profiles (
