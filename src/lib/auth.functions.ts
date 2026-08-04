@@ -40,7 +40,7 @@ export const signUp = createServerFn({ method: "POST" })
   });
 
 export const signIn = createServerFn({ method: "POST" })
-  .inputValidator((data) =>
+  .validator((data: unknown) =>
     z
       .object({
         email: z.string().email(),
