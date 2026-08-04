@@ -34,6 +34,7 @@ function Configuracoes() {
   const [name, setName] = useState(current?.workspaces?.name ?? "");
   const [income, setIncome] = useState(String(current?.workspaces?.expected_income ?? ""));
   const [invite, setInvite] = useState({ email: "", role: "editor", hide_balances: false });
+  const [openaiKey, setOpenaiKey] = useState("");
   const getUser = useServerFn(getCurrentUser);
 
   const { data } = useQuery({
@@ -45,8 +46,27 @@ function Configuracoes() {
         db.from("workspace_invites").select("id, email, role, status").eq("workspace_id", wsId!).execute(),
         db.from("subscriptions").select("status, current_period_end, plans(name, price_cents)").eq("workspace_id", wsId!).maybeSingle(),
       ]);
-      return { members: members.data ?? [], invites: invites.data ?? [], sub: sub.data };
+      const { data: config } = await db.from("platform_configs").select("value").eq("key", "openai_api_key").maybeSingle();
+      return { members: members.data ?? [], invites: invites.data ?? [], sub: sub.data, openaiKey: config?.value ?? "" };
     },
+  });
+
+  const saveAi = useMutation({
+    mutationFn: async (key: string) => {
+      // Usamos db.rpc ou uma tabela de config interna se existir, 
+      // mas como o sistema é auto-hospedado, podemos salvar no banco.
+      const { data: existing } = await db.from("platform_configs").select("id").eq("key", "openai_api_key").maybeSingle();
+      if (existing) {
+        await db.from("platform_configs").update({ value: key }).eq("key", "openai_api_key").execute();
+      } else {
+        await db.from("platform_configs").insert({ key: "openai_api_key", value: key }).execute();
+      }
+    },
+    onSuccess: () => {
+      toast.success("Configuração da OpenAI salva.");
+      qc.invalidateQueries({ queryKey: ["settings"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const saveWs = useMutation({
@@ -206,21 +226,66 @@ function Configuracoes() {
       </Card>
 
       {current?.role === "owner" && (
-        <Card className="border-destructive/20 bg-destructive/5">
-          <CardHeader>
-            <CardTitle className="text-base text-destructive">Zona de Perigo</CardTitle>
-            <CardDescription>Ações irreversíveis para este espaço financeiro.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              variant="destructive" 
-              onClick={() => deleteWs.mutate()}
-              disabled={deleteWs.isPending}
-            >
-              Excluir este Espaço Permanentemente
-            </Button>
-          </CardContent>
-        </Card>
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Inteligência Artificial (OpenAI)</CardTitle>
+              <CardDescription>
+                Configure sua API Key para processamento automático de comprovantes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-1">
+                <Label>OpenAI API Key</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    type="password" 
+                    placeholder={data?.openaiKey ? "••••••••••••••••" : "sk-..."}
+                    value={openaiKey}
+                    onChange={(e) => setOpenaiKey(e.target.value)}
+                  />
+                  <Button 
+                    onClick={() => saveAi.mutate(openaiKey)}
+                    disabled={!openaiKey || saveAi.isPending}
+                  >
+                    Salvar
+                  </Button>
+                </div>
+                {data?.openaiKey && (
+                  <p className="text-[10px] text-success">API Key configurada e ativa.</p>
+                )}
+              </div>
+              <div className="space-y-1">
+                <Label>Modelo Recomendado</Label>
+                <Select disabled defaultValue="gpt-4o-mini">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gpt-4o-mini">gpt-4o-mini (Rápido e Barato)</SelectItem>
+                    <SelectItem value="gpt-4o">gpt-4o (Alta Precisão)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-destructive/20 bg-destructive/5">
+            <CardHeader>
+              <CardTitle className="text-base text-destructive">Zona de Perigo</CardTitle>
+              <CardDescription>Ações irreversíveis para este espaço financeiro.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                variant="destructive" 
+                onClick={() => deleteWs.mutate()}
+                disabled={deleteWs.isPending}
+              >
+                Excluir este Espaço Permanentemente
+              </Button>
+            </CardContent>
+          </Card>
+        </>
       )}
 
       <div className="pt-4">
