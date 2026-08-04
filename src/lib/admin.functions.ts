@@ -56,7 +56,7 @@ export const adminOverview = createServerFn({ method: "GET" })
 
 export const adminListWorkspaces = createServerFn({ method: "GET" })
   .middleware([requireAuth])
-  .inputValidator((input: { search?: string } | undefined) => ({ search: input?.search?.trim() ?? "" }))
+  .validator((input: { search?: string } | undefined) => ({ search: input?.search?.trim() ?? "" }))
   .handler(async ({ data, context }) => {
     const { adminClient, assertPlatformAdmin } = await import("@/lib/admin.server");
     const admin = await adminClient();
