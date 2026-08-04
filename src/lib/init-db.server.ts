@@ -362,8 +362,11 @@ export async function initializeDatabase() {
         END;
         $$ LANGUAGE plpgsql SECURITY DEFINER;
       
-      
-      
+        -- 9. ADD MISSING COLUMNS (MIGRATIONS)
+        ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS is_fixed BOOLEAN NOT NULL DEFAULT true;
+        ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS day_of_month INTEGER NOT NULL DEFAULT 5;
+        ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL;
+        ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS account_id UUID REFERENCES public.financial_accounts(id) ON DELETE SET NULL;
       `;
 
       await query(sql);
