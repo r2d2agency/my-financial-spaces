@@ -89,7 +89,7 @@ function Dashboard() {
 
   const byDay = Object.values(
     (tx as any[]).reduce<Record<string, { dia: string; receitas: number; despesas: number }>>((acc: any, t: any) => {
-      const key = t.competence_date;
+      const key = typeof t.competence_date === 'string' ? t.competence_date : iso(new Date(t.competence_date));
       acc[key] ??= { dia: key.slice(8, 10), receitas: 0, despesas: 0 };
       if (isIncomeType(t.type)) acc[key].receitas += num(t.amount);
       else if (t.type !== "transfer") acc[key].despesas += num(t.amount);
