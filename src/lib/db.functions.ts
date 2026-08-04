@@ -38,6 +38,22 @@ export const dbQuery = createServerFn({ method: "POST" })
       if (data.filters) {
         const clauses = Object.entries(data.filters).map(([key, val]) => {
           if (val === null) return `${key} IS NULL`;
+          
+          // Suporte a operadores no key
+          const parts = key.split(' ');
+          if (parts.length > 1) {
+            const field = parts[0];
+            const op = parts.slice(1).join(' ');
+            
+            if (op === "= ANY") {
+              params.push(val);
+              return `${field} = ANY($${params.length})`;
+            }
+            
+            params.push(val);
+            return `${field} ${op} $${params.length}`;
+          }
+
           params.push(val);
           return `${key} = $${params.length}`;
         });
