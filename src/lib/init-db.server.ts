@@ -256,6 +256,13 @@ export async function initializeDatabase() {
           created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
 
+        CREATE TABLE IF NOT EXISTS public.platform_configs (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          key TEXT UNIQUE NOT NULL,
+          value TEXT NOT NULL,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+
         -- 4. GESTÃO DE SESSÕES
         CREATE TABLE IF NOT EXISTS public.user_sessions (
             id UUID PRIMARY KEY,

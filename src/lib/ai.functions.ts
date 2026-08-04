@@ -6,12 +6,14 @@ export const processReceipt = createServerFn({ method: "POST" })
     image: z.string(), // base64
   }))
   .handler(async ({ data }) => {
-    const apiKey = process.env['OPENAI_API_KEY'];
+    const { query } = await import("./db.server");
+    const config = await query("SELECT value FROM public.platform_configs WHERE key = 'openai_api_key' LIMIT 1");
+    const apiKey = config.rows[0]?.value || process.env['OPENAI_API_KEY'];
     
     if (!apiKey) {
-      console.warn("OPENAI_API_KEY não configurada. Usando fallback de mock.");
+      console.warn("API Key da OpenAI não encontrada no banco ou env. Usando mock.");
       return {
-        description: "Compra via Foto (Mock)",
+        description: "Compra via Foto (Mock - Configure a API Key)",
         amount: (Math.random() * 100).toFixed(2),
       };
     }
