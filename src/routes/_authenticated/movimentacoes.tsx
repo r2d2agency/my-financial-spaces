@@ -79,17 +79,37 @@ function Movimentacoes() {
   const create = useMutation({
     mutationFn: async () => {
       const me = await getUser({});
+      const amount = num(form.amount);
+      
+      let recurring_id = null;
+      if (form.is_recurring) {
+        const { data: rec, error: recErr } = await db.from("recurring_transactions").insert({
+          workspace_id: wsId!,
+          type: form.type as any,
+          description: form.description.trim(),
+          amount: amount,
+          is_fixed: form.recurring_type === "fixed",
+          category_id: form.category_id || null,
+          account_id: form.account_id || null,
+          day_of_month: new Date(form.competence_date).getDate() || 5,
+        });
+        if (recErr) throw recErr;
+        recurring_id = rec.id;
+      }
+
       const { error } = await db.from("transactions").insert({
         workspace_id: wsId!,
-        type: form.type as never,
+        type: form.type as any,
         description: form.description.trim(),
-        amount: num(form.amount),
-        status: form.status as never,
+        amount: amount,
+        status: form.status as any,
         competence_date: form.competence_date,
         paid_date: form.status === "paid" ? form.competence_date : null,
         account_id: form.account_id || null,
         category_id: form.category_id || null,
         created_by: me?.id,
+        recurring_id: recurring_id,
+        is_estimated: form.is_recurring && form.recurring_type === "variable",
       });
       if (error) throw error;
     },
