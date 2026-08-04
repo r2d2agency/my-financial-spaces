@@ -1,1 +1,2 @@
-export const requireAuth = async (ctx: any) => ({ user: { id: 'mock' } });
+export const requireAuth = {} as any;
+export const requireSupabaseAuth = {} as any;
