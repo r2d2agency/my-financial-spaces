@@ -161,6 +161,14 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               <Link to="/onboarding">+ Novo Espaço</Link>
             </Button>
+            <Button 
+              asChild 
+              variant="link" 
+              size="sm" 
+              className="w-full h-8 text-[10px] text-muted-foreground hover:text-primary"
+            >
+              <Link to="/configuracoes" hash="gerir-espaco">Gerenciar Espaço Atual</Link>
+            </Button>
           </div>
         </div>
         <nav className="flex-1 space-y-1 p-2">

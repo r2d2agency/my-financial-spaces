@@ -129,7 +129,7 @@ function Configuracoes() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight text-foreground">Configurações</h1>
 
-      <Card>
+      <Card id="gerir-espaco">
         <CardHeader>
           <CardTitle className="text-base">Espaço</CardTitle>
           <CardDescription>Nome e renda mensal esperada.</CardDescription>
