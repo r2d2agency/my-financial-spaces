@@ -37,6 +37,7 @@ export const dbQuery = createServerFn({ method: "POST" })
       const params: any[] = [];
       if (data.filters) {
         const clauses = Object.entries(data.filters).map(([key, val]) => {
+          if (val === null) return `${key} IS NULL`;
           params.push(val);
           return `${key} = $${params.length}`;
         });
@@ -71,6 +72,7 @@ export const dbQuery = createServerFn({ method: "POST" })
       
       if (data.filters) {
         const whereClauses = Object.entries(data.filters).map(([key, val]) => {
+          if (val === null) return `${key} IS NULL`;
           params.push(val);
           return `${key} = $${params.length}`;
         });
@@ -87,6 +89,7 @@ export const dbQuery = createServerFn({ method: "POST" })
       
       if (data.filters) {
         const whereClauses = Object.entries(data.filters).map(([key, val]) => {
+          if (val === null) return `${key} IS NULL`;
           params.push(val);
           return `${key} = $${params.length}`;
         });
@@ -100,7 +103,7 @@ export const dbQuery = createServerFn({ method: "POST" })
     if (data.action === "rpc") {
       try {
         if (data.rpcName === "create_workspace") {
-          const income = parseFloat(data.rpcArgs._income) || 0;
+          const income = parseFloat(String(data.rpcArgs._income || 0));
           const res = await query("SELECT public.create_workspace($1, $2, $3) as workspace_id", [
             String(data.rpcArgs._name || "Meu espaço"),
             income,

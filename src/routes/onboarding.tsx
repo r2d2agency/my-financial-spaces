@@ -172,21 +172,36 @@ function Onboarding() {
   return (
     <div className="min-h-screen bg-muted/30 px-4 py-10">
       <div className="mx-auto max-w-2xl">
-        <div className="mb-6 flex flex-wrap gap-2">
-          {steps.map((s, i) => (
-            <span
-              key={s}
-              className={`rounded-full px-3 py-1 text-xs ${
-                i === step
-                  ? "bg-primary text-primary-foreground"
-                  : i < step
-                    ? "bg-primary/10 text-primary"
-                    : "bg-background text-muted-foreground"
-              }`}
-            >
-              {i + 1}. {s}
-            </span>
-          ))}
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap gap-2">
+            {steps.map((s, i) => (
+              <span
+                key={s}
+                className={`rounded-full px-3 py-1 text-xs ${
+                  i === step
+                    ? "bg-primary text-primary-foreground"
+                    : i < step
+                      ? "bg-primary/10 text-primary"
+                      : "bg-background text-muted-foreground"
+                }`}
+              >
+                {i + 1}. {s}
+              </span>
+            ))}
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-muted-foreground hover:text-primary"
+            onClick={() => {
+              setName("Meu Espaço");
+              setIncome("0");
+              finish();
+            }}
+            disabled={saving}
+          >
+            Pular configuração (Criar vazio)
+          </Button>
         </div>
 
         <Card>
