@@ -279,7 +279,6 @@ export async function initializeDatabase() {
             v_ws_id UUID;
             v_plan_id UUID;
         BEGIN
-            -- Ensure types match
             -- 1. Criar Workspace
             INSERT INTO public.workspaces (name, owner_id, expected_income)
             VALUES (_name, _user_id, _expected_income)
