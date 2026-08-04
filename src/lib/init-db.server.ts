@@ -279,6 +279,7 @@ export async function initializeDatabase() {
             v_ws_id UUID;
             v_plan_id UUID;
         BEGIN
+            -- Ensure types match
             -- 1. Criar Workspace
             INSERT INTO public.workspaces (name, owner_id, expected_income)
             VALUES (_name, _user_id, _expected_income)
@@ -292,8 +293,10 @@ export async function initializeDatabase() {
             SELECT id INTO v_plan_id FROM public.plans WHERE slug = 'individual' LIMIT 1;
 
             -- 4. Criar Assinatura (Trial)
-            INSERT INTO public.subscriptions (workspace_id, plan_id, status, current_period_end)
-            VALUES (v_ws_id, v_plan_id, 'trialing', (CURRENT_DATE + INTERVAL '30 days'));
+            IF v_plan_id IS NOT NULL THEN
+              INSERT INTO public.subscriptions (workspace_id, plan_id, status, current_period_end)
+              VALUES (v_ws_id, v_plan_id, 'trialing', (CURRENT_DATE + INTERVAL '30 days'));
+            END IF;
 
             -- 5. Criar Categorias Padrão
             INSERT INTO public.categories (workspace_id, name, kind, color) VALUES
@@ -306,6 +309,9 @@ export async function initializeDatabase() {
             (v_ws_id, 'Freelance', 'income', '#6366f1');
 
             RETURN v_ws_id;
+        EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE 'Error in create_workspace: %', SQLERRM;
+            RAISE;
         END;
         $$ LANGUAGE plpgsql SECURITY DEFINER;
 
