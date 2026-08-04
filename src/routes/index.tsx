@@ -1,8 +1,4 @@
-import { Hero } from "@/components/landing/hero";
-import { Features } from "@/components/landing/features";
-import { CTA } from "@/components/landing/cta";
-import { Footer } from "@/components/landing/footer";
-import { Navbar } from "@/components/landing/navbar";
+import { Hero, Features, CTA, Footer, Navbar } from "@/components/landing/landing";
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
