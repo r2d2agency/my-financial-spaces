@@ -37,7 +37,10 @@ function Onboarding() {
   const [income, setIncome] = useState("");
 
   const finish = async () => {
-    if (!name.trim()) return toast.error("Dê um nome ao espaço.");
+    if (!name.trim()) {
+      toast.error("Dê um nome ao espaço.");
+      return;
+    }
     setSaving(true);
     try {
       const user = await getUser({});
