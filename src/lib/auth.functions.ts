@@ -4,7 +4,7 @@ import { query } from "./db.server";
 import { createSession } from "./auth.server";
 
 export const signUp = createServerFn({ method: "POST" })
-  .inputValidator((data) =>
+  .validator((data: unknown) =>
     z
       .object({
         email: z.string().email(),
@@ -40,7 +40,7 @@ export const signUp = createServerFn({ method: "POST" })
   });
 
 export const signIn = createServerFn({ method: "POST" })
-  .inputValidator((data) =>
+  .validator((data: unknown) =>
     z
       .object({
         email: z.string().email(),

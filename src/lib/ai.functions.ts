@@ -2,9 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 export const processReceipt = createServerFn({ method: "POST" })
-  .inputValidator(z.object({
+  .validator((data: unknown) => z.object({
     image: z.string(), // base64
-  }))
+  }).parse(data))
   .handler(async ({ data }) => {
     const { query } = await import("./db.server");
     const config = await query("SELECT value FROM public.platform_configs WHERE key = 'openai_api_key' LIMIT 1");

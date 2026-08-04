@@ -15,7 +15,7 @@ const verifyAuth = async () => {
 };
 
 export const dbQuery = createServerFn({ method: "POST" })
-  .inputValidator((data) =>
+  .validator((data: unknown) =>
     z.object({
       table: z.string(),
       action: z.enum(["select", "insert", "update", "delete", "rpc"]),
