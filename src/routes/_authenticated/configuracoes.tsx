@@ -89,12 +89,17 @@ function Configuracoes() {
   const deleteWs = useMutation({
     mutationFn: async () => {
       if (!window.confirm("ATENÇÃO: Isso excluirá permanentEMENTE este espaço e todos os seus dados (contas, transações, etc). Confirmar?")) return;
+      
+      // Primeiro removemos os membros (cascade manual se necessário, mas o schema deve ter ON DELETE CASCADE)
+      // No nosso setup manual, as tabelas referenciam workspace_id.
       const { error } = await db.from("workspaces").delete().eq("id", wsId!).execute();
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Espaço excluído com sucesso.");
       localStorage.removeItem("ef.workspace");
+      // Forçamos um recarregamento para que o WorkspaceProvider pegue o próximo espaço disponível
+      qc.invalidateQueries({ queryKey: ["memberships"] });
       window.location.href = "/dashboard";
     },
     onError: (e: Error) => toast.error(e.message),
