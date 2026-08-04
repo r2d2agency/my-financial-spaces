@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db-browser";
 import { useWorkspace } from "@/lib/workspace";
 import { brl, iso, monthLabel, monthRange, num, isIncomeType } from "@/lib/finance";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,16 +40,16 @@ function Dashboard() {
     enabled: !!wsId,
     queryFn: async () => {
       const [tx, accounts, cards, debts, goals] = await Promise.all([
-        supabase
-          .from("transactions")
+        db.from("transactions")
           .select("type, amount, status, competence_date, description, due_date")
           .eq("workspace_id", wsId!)
           .gte("competence_date", iso(start))
-          .lte("competence_date", iso(end)),
-        supabase.from("financial_accounts").select("id, name, initial_balance").eq("workspace_id", wsId!).eq("archived", false),
-        supabase.from("credit_cards").select("id, name, credit_limit").eq("workspace_id", wsId!).eq("archived", false),
-        supabase.from("debts").select("id, name, outstanding, installment_amount").eq("workspace_id", wsId!).eq("status", "active"),
-        supabase.from("financial_goals").select("id, name, target_amount, current_amount").eq("workspace_id", wsId!),
+          .lte("competence_date", iso(end))
+          .execute(),
+        db.from("financial_accounts").select("id, name, initial_balance").eq("workspace_id", wsId!).eq("archived", false).execute(),
+        db.from("credit_cards").select("id, name, credit_limit").eq("workspace_id", wsId!).eq("archived", false).execute(),
+        db.from("debts").select("id, name, outstanding, installment_amount").eq("workspace_id", wsId!).eq("status", "active").execute(),
+        db.from("financial_goals").select("id, name, target_amount, current_amount").eq("workspace_id", wsId!).execute(),
       ]);
       if (tx.error) throw tx.error;
       return {

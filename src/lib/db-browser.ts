@@ -23,17 +23,17 @@ export const db = {
       },
       
       gte(col: string, val: any) {
-        this.filters[`${col}_gte`] = val;
+        this.filters[`${col} >=`] = val;
         return this;
       },
       
       lte(col: string, val: any) {
-        this.filters[`${col}_lte`] = val;
+        this.filters[`${col} <=`] = val;
         return this;
       },
       
       in(col: string, vals: any[]) {
-        this.filters[`${col}_in`] = vals;
+        this.filters[`${col} = ANY`] = vals;
         return this;
       },
 
