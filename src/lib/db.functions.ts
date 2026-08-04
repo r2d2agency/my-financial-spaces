@@ -37,6 +37,7 @@ export const dbQuery = createServerFn({ method: "POST" })
       const params: any[] = [];
       if (data.filters) {
         const clauses = Object.entries(data.filters).map(([key, val]) => {
+          if (val === null) return `${key} IS NULL`;
           params.push(val);
           return `${key} = $${params.length}`;
         });
@@ -71,6 +72,7 @@ export const dbQuery = createServerFn({ method: "POST" })
       
       if (data.filters) {
         const whereClauses = Object.entries(data.filters).map(([key, val]) => {
+          if (val === null) return `${key} IS NULL`;
           params.push(val);
           return `${key} = $${params.length}`;
         });
@@ -87,6 +89,7 @@ export const dbQuery = createServerFn({ method: "POST" })
       
       if (data.filters) {
         const whereClauses = Object.entries(data.filters).map(([key, val]) => {
+          if (val === null) return `${key} IS NULL`;
           params.push(val);
           return `${key} = $${params.length}`;
         });
