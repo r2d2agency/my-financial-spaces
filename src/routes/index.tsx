@@ -1,7 +1,8 @@
-import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { getCurrentUser } from "@/lib/auth-client.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -30,11 +31,9 @@ function Index() {
           Sua gestão financeira moderna, simples e segura.
         </p>
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Navigate to="/auth">
-            <button className="rounded-lg bg-primary px-8 py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary/90">
-              Começar Agora
-            </button>
-          </Navigate>
+          <Button asChild size="lg" className="rounded-lg px-8 py-6 text-lg font-semibold">
+            <Link to="/auth">Começar Agora</Link>
+          </Button>
         </div>
       </div>
     </div>
