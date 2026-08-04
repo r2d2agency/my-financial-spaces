@@ -226,65 +226,66 @@ function Configuracoes() {
       </Card>
 
       {current?.role === "owner" && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Inteligência Artificial (OpenAI)</CardTitle>
-            <CardDescription>
-              Configure sua API Key para processamento automático de comprovantes.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1">
-              <Label>OpenAI API Key</Label>
-              <div className="flex gap-2">
-                <Input 
-                  type="password" 
-                  placeholder={data?.openaiKey ? "••••••••••••••••" : "sk-..."}
-                  value={openaiKey}
-                  onChange={(e) => setOpenaiKey(e.target.value)}
-                />
-                <Button 
-                  onClick={() => saveAi.mutate(openaiKey)}
-                  disabled={!openaiKey || saveAi.isPending}
-                >
-                  Salvar
-                </Button>
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Inteligência Artificial (OpenAI)</CardTitle>
+              <CardDescription>
+                Configure sua API Key para processamento automático de comprovantes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-1">
+                <Label>OpenAI API Key</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    type="password" 
+                    placeholder={data?.openaiKey ? "••••••••••••••••" : "sk-..."}
+                    value={openaiKey}
+                    onChange={(e) => setOpenaiKey(e.target.value)}
+                  />
+                  <Button 
+                    onClick={() => saveAi.mutate(openaiKey)}
+                    disabled={!openaiKey || saveAi.isPending}
+                  >
+                    Salvar
+                  </Button>
+                </div>
+                {data?.openaiKey && (
+                  <p className="text-[10px] text-success">API Key configurada e ativa.</p>
+                )}
               </div>
-              {data?.openaiKey && (
-                <p className="text-[10px] text-success">API Key configurada e ativa.</p>
-              )}
-            </div>
-            <div className="space-y-1">
-              <Label>Modelo Recomendado</Label>
-              <Select disabled defaultValue="gpt-4o-mini">
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="gpt-4o-mini">gpt-4o-mini (Rápido e Barato)</SelectItem>
-                  <SelectItem value="gpt-4o">gpt-4o (Alta Precisão)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              <div className="space-y-1">
+                <Label>Modelo Recomendado</Label>
+                <Select disabled defaultValue="gpt-4o-mini">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gpt-4o-mini">gpt-4o-mini (Rápido e Barato)</SelectItem>
+                    <SelectItem value="gpt-4o">gpt-4o (Alta Precisão)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="border-destructive/20 bg-destructive/5">
-          <CardHeader>
-            <CardTitle className="text-base text-destructive">Zona de Perigo</CardTitle>
-            <CardDescription>Ações irreversíveis para este espaço financeiro.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              variant="destructive" 
-              onClick={() => deleteWs.mutate()}
-              disabled={deleteWs.isPending}
-            >
-              Excluir este Espaço Permanentemente
-            </Button>
-          </CardContent>
-        </Card>
+          <Card className="border-destructive/20 bg-destructive/5">
+            <CardHeader>
+              <CardTitle className="text-base text-destructive">Zona de Perigo</CardTitle>
+              <CardDescription>Ações irreversíveis para este espaço financeiro.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                variant="destructive" 
+                onClick={() => deleteWs.mutate()}
+                disabled={deleteWs.isPending}
+              >
+                Excluir este Espaço Permanentemente
+              </Button>
+            </CardContent>
+          </Card>
+        </>
       )}
 
       <div className="pt-4">
