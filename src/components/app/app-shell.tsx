@@ -134,7 +134,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </span>
           Espaço Financeiro
         </div>
-        <div className="border-b border-border p-3">
+        <div className="border-b border-border p-3 space-y-2">
           <Select value={wsId ?? ""} onValueChange={setWsId}>
             <SelectTrigger>
               <SelectValue placeholder="Selecione o espaço" />
@@ -147,11 +147,21 @@ export function AppShell({ children }: { children: ReactNode }) {
               ))}
             </SelectContent>
           </Select>
-          {current && (
-            <p className="mt-2 px-1 text-xs capitalize text-muted-foreground">
-              Seu papel: {current.role}
-            </p>
-          )}
+          <div className="flex flex-col gap-1">
+            {current && (
+              <p className="px-1 text-[10px] uppercase font-bold tracking-wider text-muted-foreground/60">
+                Acesso: {current.role === 'owner' ? 'Proprietário' : current.role === 'admin' ? 'Administrador' : current.role === 'editor' ? 'Editor' : 'Visualizador'}
+              </p>
+            )}
+            <Button 
+              asChild 
+              variant="outline" 
+              size="sm" 
+              className="w-full h-8 text-xs border-dashed"
+            >
+              <Link to="/onboarding">+ Novo Espaço</Link>
+            </Button>
+          </div>
         </div>
         <nav className="flex-1 space-y-1 p-2">
           {nav.map((n) => {

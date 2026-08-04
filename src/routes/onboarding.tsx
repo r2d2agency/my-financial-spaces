@@ -44,7 +44,7 @@ type Debt = { name: string; outstanding: string; installment_amount: string; ins
 type Invite = { email: string; role: string; hide_balances: boolean };
 type Goal = { name: string; target_amount: string };
 
-const steps = ["Espaço", "Contas", "Cartões", "Despesas fixas", "Dívidas", "Equipe", "Metas"];
+const steps = ["Configuração"];
 
 function Onboarding() {
   const navigate = useNavigate();
@@ -172,50 +172,12 @@ function Onboarding() {
 
   return (
     <div className="min-h-screen bg-muted/30 px-4 py-10">
-      <div className="mx-auto max-w-2xl">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap gap-2">
-            {steps.map((s, i) => (
-              <span
-                key={s}
-                className={`rounded-full px-3 py-1 text-xs ${
-                  i === step
-                    ? "bg-primary text-primary-foreground"
-                    : i < step
-                      ? "bg-primary/10 text-primary"
-                      : "bg-background text-muted-foreground"
-                }`}
-              >
-                {i + 1}. {s}
-              </span>
-            ))}
-          </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-muted-foreground hover:text-primary"
-            onClick={() => {
-              setName("Meu Espaço");
-              setIncome("0");
-              finish();
-            }}
-            disabled={saving}
-          >
-            Pular configuração (Criar vazio)
-          </Button>
-        </div>
-
+      <div className="mx-auto max-w-lg">
         <Card>
           <CardHeader>
-            <CardTitle>{steps[step]}</CardTitle>
+            <CardTitle>Criar Novo Espaço</CardTitle>
             <CardDescription>
-              {step === 0 && "Dê um nome ao espaço e informe a renda mensal esperada."}
-              {step === 1 && "Cadastre contas bancárias, carteira ou dinheiro."}
-              {step === 2 && "Cartões de crédito com limite, fechamento e vencimento."}
-              {step === 3 && "Despesas fixas mensais (aluguel, energia, internet...)."}
-              {step === 4 && "Dívidas e financiamentos em andamento."}
-              {step === 5 && "Convide pessoas e defina as permissões."}
-              {step === 6 && "Metas financeiras que você quer alcançar."}
+              Dê um nome ao seu novo espaço financeiro para começar a organizar suas contas.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
