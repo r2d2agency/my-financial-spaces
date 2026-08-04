@@ -67,7 +67,8 @@ function Onboarding() {
     try {
       const { data: wsId, error } = await db.rpc("create_workspace", {
         _name: (name || "Meu espaço").trim(),
-        _income: parseFloat(String(income || 0)),
+        _income: parseFloat(String(income || 0)) || 0,
+        _user_id: (await getUser({}))?.id,
       });
       if (error) throw error;
       const ws = wsId as unknown as string;
