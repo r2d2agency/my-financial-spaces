@@ -10,13 +10,7 @@ RUN npm install
 
 COPY . .
 
-# Vite inlines VITE_* at build time, so they must be present here.
-ARG VITE_SUPABASE_URL
-ARG VITE_SUPABASE_PUBLISHABLE_KEY
-ARG VITE_SUPABASE_PROJECT_ID
-ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL \
-    VITE_SUPABASE_PUBLISHABLE_KEY=$VITE_SUPABASE_PUBLISHABLE_KEY \
-    VITE_SUPABASE_PROJECT_ID=$VITE_SUPABASE_PROJECT_ID
+# O sistema usa PostgreSQL puro e OpenAI. Não há dependências de build-time VITE_SUPABASE.
 
 RUN npm run build
 

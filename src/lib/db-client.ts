@@ -1,6 +1,6 @@
 /** 
  * Adaptador de Banco de Dados PostgreSQL para o app.
- * Substitui o cliente Supabase para consultas internas.
+ * Adaptador de Banco de Dados PostgreSQL para o app.
  */
 import { query } from "./db.server";
 
