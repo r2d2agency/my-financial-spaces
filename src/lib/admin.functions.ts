@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAuth } from "./auth-middleware.server";
 
 export const getAdminStatus = createServerFn({ method: "GET" })
   .middleware([requireAuth])
