@@ -240,7 +240,7 @@ function Movimentacoes() {
                         onChange={(e) => setForm(f => ({ ...f, is_recurring: e.target.checked }))}
                         className="size-4 rounded border-gray-300 text-primary focus:ring-primary"
                       />
-                      <Label htmlFor="is_recurring" className="cursor-pointer">Recorrente</Label>
+                      <Label htmlFor="is_recurring" className="cursor-pointer">Recorrente (fixo ou variável)</Label>
                     </div>
 
                     {form.is_recurring && (
