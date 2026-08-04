@@ -73,7 +73,10 @@ function Calendario() {
             {(cells as any[]).map((day, i) => {
               if (day === null) return <div key={`e${i}`} />;
               const date = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-              const items = ((data as any[]) ?? []).filter((t: any) => t.competence_date === date);
+              const items = ((data as any[]) ?? []).filter((t: any) => {
+                const dateStr = typeof t.competence_date === 'string' ? t.competence_date : iso(new Date(t.competence_date));
+                return dateStr === date;
+              });
               const inc = items.filter((t: any) => isIncomeType(t.type)).reduce((s: number, t: any) => s + num(t.amount), 0);
               const out = items.filter((t: any) => !isIncomeType(t.type) && t.type !== "transfer").reduce((s: number, t: any) => s + num(t.amount), 0);
               return (

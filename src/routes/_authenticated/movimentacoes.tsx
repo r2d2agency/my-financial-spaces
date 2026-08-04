@@ -229,7 +229,7 @@ function Movimentacoes() {
               <div className="min-w-0">
                 <p className="truncate font-medium text-foreground">{t.description}</p>
                 <p className="text-xs text-muted-foreground">
-                  {t.competence_date.split("-").reverse().join("/")} · {catName(t.category_id)}
+                  {typeof t.competence_date === "string" ? t.competence_date.split("-").reverse().join("/") : new Date(t.competence_date).toLocaleDateString("pt-BR")} · {catName(t.category_id)}
                 </p>
               </div>
               <div className="flex items-center gap-3">

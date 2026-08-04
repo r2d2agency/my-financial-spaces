@@ -49,7 +49,10 @@ function Relatorios() {
   const months = Array.from({ length: 6 }, (_, i) => addMonths(now, -5 + i));
   const series = months.map((m) => {
     const key = iso(m).slice(0, 7);
-    const items = ((data as any)?.tx ?? []).filter((t: any) => t.competence_date.startsWith(key));
+    const items = ((data as any)?.tx ?? []).filter((t: any) => {
+      const dateStr = typeof t.competence_date === 'string' ? t.competence_date : iso(new Date(t.competence_date));
+      return dateStr.startsWith(key);
+    });
     return {
       mes: monthLabel(m).slice(0, 3),
       receitas: items.filter((t: any) => isIncomeType(t.type)).reduce((s: number, t: any) => s + num(t.amount), 0),
