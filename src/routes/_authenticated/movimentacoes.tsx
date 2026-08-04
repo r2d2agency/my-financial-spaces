@@ -46,6 +46,8 @@ function Movimentacoes() {
     status: "pending",
     account_id: "",
     category_id: "",
+    is_recurring: false,
+    recurring_type: "fixed", // "fixed" ou "variable" (estimated)
   });
 
   const { data: meta } = useQuery({
@@ -66,7 +68,7 @@ function Movimentacoes() {
     queryFn: async () => {
       const { data, error } = await db
         .from("transactions")
-        .select("id, type, description, amount, status, competence_date, category_id")
+        .select("id, type, description, amount, status, competence_date, category_id, is_estimated, recurring_id")
         .eq("workspace_id", wsId!)
         .execute(); // Simplificando para o db-browser básico
       if (error) throw error;
@@ -77,17 +79,37 @@ function Movimentacoes() {
   const create = useMutation({
     mutationFn: async () => {
       const me = await getUser({});
+      const amount = num(form.amount);
+      
+      let recurring_id = null;
+      if (form.is_recurring) {
+        const { data: rec, error: recErr } = await db.from("recurring_transactions").insert({
+          workspace_id: wsId!,
+          type: form.type as any,
+          description: form.description.trim(),
+          amount: amount,
+          is_fixed: form.recurring_type === "fixed",
+          category_id: form.category_id || null,
+          account_id: form.account_id || null,
+          day_of_month: new Date(form.competence_date).getDate() || 5,
+        });
+        if (recErr) throw recErr;
+        recurring_id = rec.id;
+      }
+
       const { error } = await db.from("transactions").insert({
         workspace_id: wsId!,
-        type: form.type as never,
+        type: form.type as any,
         description: form.description.trim(),
-        amount: num(form.amount),
-        status: form.status as never,
+        amount: amount,
+        status: form.status as any,
         competence_date: form.competence_date,
         paid_date: form.status === "paid" ? form.competence_date : null,
         account_id: form.account_id || null,
         category_id: form.category_id || null,
         created_by: me?.id,
+        recurring_id: recurring_id,
+        is_estimated: form.is_recurring && form.recurring_type === "variable",
       });
       if (error) throw error;
     },
@@ -208,6 +230,43 @@ function Movimentacoes() {
                       </Select>
                     </div>
                   </div>
+                  
+                  <div className="flex items-center gap-4 py-2">
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        id="is_recurring"
+                        checked={form.is_recurring} 
+                        onChange={(e) => setForm(f => ({ ...f, is_recurring: e.target.checked }))}
+                        className="size-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <Label htmlFor="is_recurring" className="cursor-pointer">Recorrente</Label>
+                    </div>
+
+                    {form.is_recurring && (
+                      <div className="flex items-center gap-3">
+                        <label className="flex items-center gap-1 text-sm cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name="rec_type" 
+                            checked={form.recurring_type === "fixed"} 
+                            onChange={() => setForm(f => ({ ...f, recurring_type: "fixed" }))}
+                          />
+                          Fixo
+                        </label>
+                        <label className="flex items-center gap-1 text-sm cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name="rec_type" 
+                            checked={form.recurring_type === "variable"} 
+                            onChange={() => setForm(f => ({ ...f, recurring_type: "variable" }))}
+                          />
+                          Variável (Estimativa)
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
                   <Button className="w-full" disabled={create.isPending || !form.description || !form.amount} onClick={() => create.mutate()}>
                     {create.isPending ? "Salvando..." : "Salvar"}
                   </Button>
@@ -230,6 +289,8 @@ function Movimentacoes() {
                 <p className="truncate font-medium text-foreground">{t.description}</p>
                 <p className="text-xs text-muted-foreground">
                   {typeof t.competence_date === "string" ? t.competence_date.split("-").reverse().join("/") : new Date(t.competence_date).toLocaleDateString("pt-BR")} · {catName(t.category_id)}
+                  {t.recurring_id && <span className="ml-2 text-[10px] uppercase tracking-wider text-primary font-bold">● Recorrente</span>}
+                  {t.is_estimated && <span className="ml-2 text-[10px] uppercase tracking-wider text-amber-500 font-bold">● Estimado</span>}
                 </p>
               </div>
               <div className="flex items-center gap-3">
