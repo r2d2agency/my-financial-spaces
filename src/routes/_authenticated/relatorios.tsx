@@ -174,19 +174,19 @@ function Relatorios() {
             <CardTitle className="text-base">Resumo do Mês</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {series[5] && (
+            {pastSeries[5] && (
               <>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Total Recebido</p>
-                  <p className="text-2xl font-bold text-emerald-600">{brl(series[5].receitas)}</p>
+                  <p className="text-2xl font-bold text-emerald-600">{brl(pastSeries[5].receitas)}</p>
                 </div>
                 <div className="space-y-1 border-t pt-4">
                   <p className="text-sm text-muted-foreground">Total Gasto</p>
-                  <p className="text-2xl font-bold text-rose-600">{brl(series[5].despesas)}</p>
+                  <p className="text-2xl font-bold text-rose-600">{brl(pastSeries[5].despesas)}</p>
                 </div>
                 <div className="space-y-1 border-t pt-4">
                   <p className="text-sm text-muted-foreground">Saldo do Período</p>
-                  <p className="text-2xl font-bold">{brl(series[5].receitas - series[5].despesas)}</p>
+                  <p className="text-2xl font-bold">{brl(pastSeries[5].receitas - pastSeries[5].despesas)}</p>
                 </div>
               </>
             )}
