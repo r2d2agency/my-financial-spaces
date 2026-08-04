@@ -66,6 +66,20 @@ function Configuracoes() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const deleteWs = useMutation({
+    mutationFn: async () => {
+      if (!window.confirm("ATENÇÃO: Isso excluirá permanentEMENTE este espaço e todos os seus dados (contas, transações, etc). Confirmar?")) return;
+      const { error } = await db.from("workspaces").delete().eq("id", wsId!).execute();
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Espaço excluído com sucesso.");
+      localStorage.removeItem("ef.workspace");
+      window.location.href = "/dashboard";
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const sendInvite = useMutation({
     mutationFn: async () => {
       const me = await getUser({});
@@ -191,9 +205,29 @@ function Configuracoes() {
         </CardContent>
       </Card>
 
-      <Button asChild variant="outline">
-        <Link to="/onboarding">Criar novo espaço</Link>
-      </Button>
+      {current?.role === "owner" && (
+        <Card className="border-destructive/20 bg-destructive/5">
+          <CardHeader>
+            <CardTitle className="text-base text-destructive">Zona de Perigo</CardTitle>
+            <CardDescription>Ações irreversíveis para este espaço financeiro.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              variant="destructive" 
+              onClick={() => deleteWs.mutate()}
+              disabled={deleteWs.isPending}
+            >
+              Excluir este Espaço Permanentemente
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="pt-4">
+        <Button asChild variant="outline">
+          <Link to="/onboarding">Criar novo espaço</Link>
+        </Button>
+      </div>
     </div>
   );
 }
