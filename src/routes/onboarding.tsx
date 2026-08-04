@@ -65,11 +65,15 @@ function Onboarding() {
   const finish = async () => {
     setSaving(true);
     try {
+      console.log("Calling create_workspace with:", { name, income });
       const { data: wsId, error } = await db.rpc("create_workspace", {
-        _name: name.trim() || "Meu espaço",
-        _income: parseFloat(income) || 0,
+        _name: (name || "Meu espaço").trim(),
+        _income: parseFloat(String(income || 0)),
       });
-      if (error) throw error;
+      if (error) {
+        console.error("Workspace creation failed:", error);
+        throw error;
+      }
       const ws = wsId as unknown as string;
 
       const rows = accounts.filter((a) => a.name.trim());
