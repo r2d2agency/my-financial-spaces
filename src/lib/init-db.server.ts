@@ -188,7 +188,9 @@ export async function initializeDatabase() {
           category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
           created_by UUID NOT NULL,
           created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-          updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          recurring_id UUID REFERENCES public.recurring_transactions(id) ON DELETE SET NULL,
+          is_estimated BOOLEAN NOT NULL DEFAULT false
         );
 
         CREATE TABLE IF NOT EXISTS public.debts (
@@ -221,6 +223,9 @@ export async function initializeDatabase() {
           amount NUMERIC(14,2) NOT NULL,
           frequency TEXT NOT NULL DEFAULT 'monthly',
           day_of_month INTEGER NOT NULL DEFAULT 5,
+          is_fixed BOOLEAN NOT NULL DEFAULT true,
+          category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
+          account_id UUID REFERENCES public.financial_accounts(id) ON DELETE SET NULL,
           created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
 
