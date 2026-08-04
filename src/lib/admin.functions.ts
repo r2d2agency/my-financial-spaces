@@ -85,7 +85,7 @@ export const adminListWorkspaces = createServerFn({ method: "GET" })
 
 export const adminSetWorkspaceSuspended = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: { workspaceId: string; suspended: boolean }) => input)
+  .validator((input: { workspaceId: string; suspended: boolean }) => input)
   .handler(async ({ data, context }) => {
     const { adminClient, assertPlatformAdmin, logAdminAction } = await import("@/lib/admin.server");
     const admin = await adminClient();
@@ -115,7 +115,7 @@ export const adminListPlans = createServerFn({ method: "GET" })
 
 export const adminSavePlan = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: any) => input)
+  .validator((input: any) => input)
   .handler(async ({ data, context }) => {
     const { adminClient, assertPlatformAdmin, logAdminAction } = await import("@/lib/admin.server");
     const admin = await adminClient();
@@ -142,7 +142,7 @@ export const adminSavePlan = createServerFn({ method: "POST" })
 
 export const adminUpdateSubscription = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: any) => input)
+  .validator((input: any) => input)
   .handler(async ({ data, context }) => {
     const { adminClient, assertPlatformAdmin, logAdminAction } = await import("@/lib/admin.server");
     const admin = await adminClient();
@@ -152,7 +152,7 @@ export const adminUpdateSubscription = createServerFn({ method: "POST" })
 
 export const adminSendSupportMessage = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: { workspaceId: string; title: string; body: string }) => input)
+  .validator((input: { workspaceId: string; title: string; body: string }) => input)
   .handler(async ({ data, context }) => {
     const { adminClient, assertPlatformAdmin, logAdminAction } = await import("@/lib/admin.server");
     const admin = await adminClient();
@@ -170,7 +170,7 @@ export const adminSendSupportMessage = createServerFn({ method: "POST" })
 
 export const adminListAudit = createServerFn({ method: "GET" })
   .middleware([requireAuth])
-  .inputValidator((input: { workspaceId?: string } | undefined) => ({ workspaceId: input?.workspaceId ?? "" }))
+  .validator((input: { workspaceId?: string } | undefined) => ({ workspaceId: input?.workspaceId ?? "" }))
   .handler(async ({ data, context }) => {
     const { adminClient, assertPlatformAdmin } = await import("@/lib/admin.server");
     const admin = await adminClient();
