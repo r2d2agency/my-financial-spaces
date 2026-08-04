@@ -110,7 +110,7 @@ export function QuickTransaction() {
       <DialogTrigger asChild>
         <Button
           size="icon"
-          className="fixed right-6 bottom-20 z-50 h-14 w-14 rounded-full shadow-2xl lg:bottom-6"
+          className="fixed right-6 bottom-20 z-50 h-14 w-14 rounded-full shadow-2xl lg:bottom-24"
           aria-label="Lançamento Rápido"
         >
           <Plus className="size-6" />
