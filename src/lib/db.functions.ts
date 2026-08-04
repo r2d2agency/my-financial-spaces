@@ -107,8 +107,6 @@ export const dbQuery = createServerFn({ method: "POST" })
           const income = parseFloat(String(data.rpcArgs._income || 0));
           const targetUserId = data.rpcArgs._user_id || userId;
           
-          console.log(`[RPC] create_workspace: name=${name}, income=${income}, userId=${targetUserId}`);
-          
           const res = await query("SELECT public.create_workspace($1, $2, $3) as workspace_id", [
             name,
             income,
@@ -121,8 +119,8 @@ export const dbQuery = createServerFn({ method: "POST" })
           return res.rows;
         }
       } catch (rpcErr) {
+        // Log sensitive details only on server, never return to client
         console.error(`RPC Error (${data.rpcName}):`, rpcErr);
-        // Throw a cleaner error for the UI
         if (rpcErr instanceof Error) {
           throw new Error(`Erro no Banco: ${rpcErr.message}`);
         }
