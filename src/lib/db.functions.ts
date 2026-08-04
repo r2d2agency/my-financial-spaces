@@ -103,11 +103,16 @@ export const dbQuery = createServerFn({ method: "POST" })
     if (data.action === "rpc") {
       try {
         if (data.rpcName === "create_workspace") {
+          const name = String(data.rpcArgs._name || "Meu espaço");
           const income = parseFloat(String(data.rpcArgs._income || 0));
+          const targetUserId = data.rpcArgs._user_id || userId;
+          
+          console.log(`[RPC] create_workspace: name=${name}, income=${income}, userId=${targetUserId}`);
+          
           const res = await query("SELECT public.create_workspace($1, $2, $3) as workspace_id", [
-            String(data.rpcArgs._name || "Meu espaço"),
+            name,
             income,
-            data.rpcArgs._user_id || userId
+            targetUserId
           ]);
           return res.rows[0].workspace_id;
         }
@@ -117,6 +122,10 @@ export const dbQuery = createServerFn({ method: "POST" })
         }
       } catch (rpcErr) {
         console.error(`RPC Error (${data.rpcName}):`, rpcErr);
+        // Throw a cleaner error for the UI
+        if (rpcErr instanceof Error) {
+          throw new Error(`Erro no Banco: ${rpcErr.message}`);
+        }
         throw rpcErr;
       }
     }
