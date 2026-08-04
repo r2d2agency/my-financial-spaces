@@ -126,8 +126,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="flex min-h-screen bg-muted/20">
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-background lg:flex">
+    <div className="flex min-h-screen bg-[#F8FAFC]">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-white lg:flex">
         <div className="flex h-16 items-center gap-2 border-b border-border px-4 font-semibold">
           <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground">
             <Wallet className="size-4" />
