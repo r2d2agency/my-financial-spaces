@@ -25,29 +25,37 @@ const COLORS = ["#10b981", "#0ea5e9", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6"
 function Relatorios() {
   const { wsId } = useWorkspace();
   const now = new Date();
-  const from = monthRange(addMonths(now, -5)).start;
-  const { end } = monthRange(now);
+  
+  // Passado: 6 meses atrás até hoje
+  const pastFrom = monthRange(addMonths(now, -5)).start;
+  // Futuro: Hoje até 6 meses à frente
+  const futureEnd = monthRange(addMonths(now, 6)).end;
 
   const { data } = useQuery({
-    queryKey: ["report", wsId, iso(from)],
+    queryKey: ["report-all", wsId],
     enabled: !!wsId,
     queryFn: async () => {
-      const [tx, cats] = await Promise.all([
+      const [tx, cats, recurring] = await Promise.all([
         db
           .from("transactions")
-          .select("amount, type, competence_date, category_id")
+          .select("amount, type, competence_date, category_id, is_estimated")
           .eq("workspace_id", wsId!)
-          .gte("competence_date", iso(from))
-          .lte("competence_date", iso(end))
+          .gte("competence_date", iso(pastFrom))
           .execute(),
         db.from("categories").select("id, name").eq("workspace_id", wsId!).execute(),
+        db.from("recurring_transactions").select("amount, type, day_of_month, category_id").eq("workspace_id", wsId!).execute(),
       ]);
-      return { tx: tx.data ?? [], cats: cats.data ?? [] };
+      return { 
+        tx: tx.data ?? [], 
+        cats: cats.data ?? [],
+        recurring: recurring.data ?? []
+      };
     },
   });
 
-  const months = Array.from({ length: 6 }, (_, i) => addMonths(now, -5 + i));
-  const series = months.map((m) => {
+  // Histórico (6 meses)
+  const pastMonths = Array.from({ length: 6 }, (_, i) => addMonths(now, -5 + i));
+  const pastSeries = pastMonths.map((m) => {
     const key = iso(m).slice(0, 7);
     const items = ((data as any)?.tx ?? []).filter((t: any) => {
       const dateStr = typeof t.competence_date === 'string' ? t.competence_date : iso(new Date(t.competence_date));
@@ -57,6 +65,29 @@ function Relatorios() {
       mes: monthLabel(m).slice(0, 3),
       receitas: items.filter((t: any) => isIncomeType(t.type)).reduce((s: number, t: any) => s + num(t.amount), 0),
       despesas: items.filter((t: any) => !isIncomeType(t.type) && t.type !== "transfer").reduce((s: number, t: any) => s + num(t.amount), 0),
+    };
+  });
+
+  // Projeção (Próximos 6 meses)
+  const projectionMonths = Array.from({ length: 6 }, (_, i) => addMonths(now, i + 1));
+  const projectionSeries = projectionMonths.map((m) => {
+    const key = iso(m).slice(0, 7);
+    
+    // Lançamentos já confirmados/agendados no futuro
+    const existing = ((data as any)?.tx ?? []).filter((t: any) => {
+      const dateStr = typeof t.competence_date === 'string' ? t.competence_date : iso(new Date(t.competence_date));
+      return dateStr.startsWith(key);
+    });
+
+    // Adiciona os recorrentes que ainda não foram lançados como transação
+    const rec = (data as any)?.recurring ?? [];
+    const recIncome = rec.filter((r: any) => isIncomeType(r.type)).reduce((s: number, r: any) => s + num(r.amount), 0);
+    const recExpense = rec.filter((r: any) => !isIncomeType(r.type)).reduce((s: number, r: any) => s + num(r.amount), 0);
+
+    return {
+      mes: monthLabel(m).slice(0, 3),
+      receitas: existing.filter((t: any) => isIncomeType(t.type)).reduce((s: number, t: any) => s + num(t.amount), 0) + recIncome,
+      despesas: existing.filter((t: any) => !isIncomeType(t.type) && t.type !== "transfer").reduce((s: number, t: any) => s + num(t.amount), 0) + recExpense,
     };
   });
 
@@ -73,48 +104,95 @@ function Relatorios() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight text-foreground">Relatórios</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-foreground">Relatórios & Projeções</h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Últimos 6 meses</CardTitle>
-        </CardHeader>
-        <CardContent className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={series}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="mes" fontSize={12} />
-              <YAxis fontSize={12} />
-              <Tooltip formatter={(v) => brl(Number(v))} />
-              <Legend />
-              <Bar dataKey="receitas" fill="#10b981" radius={4} />
-              <Bar dataKey="despesas" fill="#ef4444" radius={4} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Despesas por categoria</CardTitle>
-        </CardHeader>
-        <CardContent className="h-80">
-          {byCat.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sem dados suficientes.</p>
-          ) : (
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Histórico (Últimos 6 meses)</CardTitle>
+          </CardHeader>
+          <CardContent className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={byCat} dataKey="value" nameKey="name" outerRadius={110} label>
-                  {byCat.map((_: any, i: number) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
+              <BarChart data={pastSeries}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis dataKey="mes" fontSize={12} />
+                <YAxis fontSize={12} />
                 <Tooltip formatter={(v) => brl(Number(v))} />
-              </PieChart>
+                <Legend />
+                <Bar dataKey="receitas" fill="oklch(0.65 0.15 150)" name="Entradas" radius={4} />
+                <Bar dataKey="despesas" fill="oklch(0.6 0.18 20)" name="Saídas" radius={4} />
+              </BarChart>
             </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="text-base text-primary">Projeção (Próximos 6 meses)</CardTitle>
+          </CardHeader>
+          <CardContent className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={projectionSeries}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border opacity-50" />
+                <XAxis dataKey="mes" fontSize={12} />
+                <YAxis fontSize={12} />
+                <Tooltip formatter={(v) => brl(Number(v))} />
+                <Legend />
+                <Bar dataKey="receitas" fill="oklch(0.65 0.15 150)" opacity={0.6} name="Entradas Previstas" radius={4} />
+                <Bar dataKey="despesas" fill="oklch(0.6 0.18 20)" opacity={0.6} name="Saídas Previstas" radius={4} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base">Despesas por categoria (Geral)</CardTitle>
+          </CardHeader>
+          <CardContent className="h-80">
+            {byCat.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sem dados suficientes.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={byCat} dataKey="value" nameKey="name" outerRadius={110} label>
+                    {byCat.map((_: any, i: number) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(v) => brl(Number(v))} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Resumo do Mês</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {series[5] && (
+              <>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Total Recebido</p>
+                  <p className="text-2xl font-bold text-emerald-600">{brl(series[5].receitas)}</p>
+                </div>
+                <div className="space-y-1 border-t pt-4">
+                  <p className="text-sm text-muted-foreground">Total Gasto</p>
+                  <p className="text-2xl font-bold text-rose-600">{brl(series[5].despesas)}</p>
+                </div>
+                <div className="space-y-1 border-t pt-4">
+                  <p className="text-sm text-muted-foreground">Saldo do Período</p>
+                  <p className="text-2xl font-bold">{brl(series[5].receitas - series[5].despesas)}</p>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
