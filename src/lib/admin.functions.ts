@@ -1,12 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAuth } from "./auth-middleware.server";
 
 export const getAdminStatus = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async ({ context }) => {
     const { adminClient } = await import("@/lib/admin.server");
     const admin = await adminClient();
-    const mine = await admin.from("user_roles").select("role").eq("user_id", context.userId).eq("role", "platform_admin").maybeSingle();
+    const mine = await admin.from("user_roles").select("role").eq("user_id", context!.userId).eq("role", "platform_admin").maybeSingle();
     const any = await admin.from("user_roles").select("*").eq("role", "platform_admin");
     const adminCount = Array.isArray(any.data) ? any.data.length : 0;
     
@@ -24,9 +24,9 @@ export const claimPlatformAdmin = createServerFn({ method: "POST" })
     if (count > 0) throw new Error("A plataforma já possui um administrador.");
     const { error } = await admin
       .from("user_roles")
-      .insert({ user_id: context.userId, role: "platform_admin" });
+      .insert({ user_id: context!.userId, role: "platform_admin" });
     if (error) throw new Error(error.message);
-    await logAdminAction(admin, context.userId, "platform_admin.claim", "user_roles", context.userId);
+    await logAdminAction(admin, context!.userId, "platform_admin.claim", "user_roles", context!.userId);
     return { ok: true };
   });
 
@@ -35,7 +35,7 @@ export const adminOverview = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { adminClient, assertPlatformAdmin } = await import("@/lib/admin.server");
     const admin = await adminClient();
-    await assertPlatformAdmin(admin, context.userId);
+    await assertPlatformAdmin(admin, context!.userId);
     
     // Simplificando contagens para PG puro
     const [ws, users, txs] = await Promise.all([
@@ -60,7 +60,7 @@ export const adminListWorkspaces = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { adminClient, assertPlatformAdmin } = await import("@/lib/admin.server");
     const admin = await adminClient();
-    await assertPlatformAdmin(admin, context.userId);
+    await assertPlatformAdmin(admin, context!.userId);
     
     const { data: rows, error } = await admin.from("workspaces").select("*");
     if (error) throw new Error(error.message);
@@ -89,7 +89,7 @@ export const adminSetWorkspaceSuspended = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { adminClient, assertPlatformAdmin, logAdminAction } = await import("@/lib/admin.server");
     const admin = await adminClient();
-    await assertPlatformAdmin(admin, context.userId);
+    await assertPlatformAdmin(admin, context!.userId);
     
     const { error } = await admin
       .from("workspaces")
@@ -98,7 +98,7 @@ export const adminSetWorkspaceSuspended = createServerFn({ method: "POST" })
       .execute();
       
     if (error) throw new Error(error.message);
-    await logAdminAction(admin, context.userId, data.suspended ? "workspace.suspend" : "workspace.reactivate", "workspaces", data.workspaceId, {}, data.workspaceId);
+    await logAdminAction(admin, context!.userId, data.suspended ? "workspace.suspend" : "workspace.reactivate", "workspaces", data.workspaceId, {}, data.workspaceId);
     return { ok: true };
   });
 
@@ -107,7 +107,7 @@ export const adminListPlans = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { adminClient, assertPlatformAdmin } = await import("@/lib/admin.server");
     const admin = await adminClient();
-    await assertPlatformAdmin(admin, context.userId);
+    await assertPlatformAdmin(admin, context!.userId);
     const { data: plans, error } = await admin.from("plans").select("*");
     if (error) throw new Error(error.message);
     return (plans ?? []).map((p: any) => ({ ...p, subscribers: 0 }));
@@ -119,7 +119,7 @@ export const adminSavePlan = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { adminClient, assertPlatformAdmin, logAdminAction } = await import("@/lib/admin.server");
     const admin = await adminClient();
-    await assertPlatformAdmin(admin, context.userId);
+    await assertPlatformAdmin(admin, context!.userId);
     
     const payload = {
       slug: data.slug,
@@ -136,7 +136,7 @@ export const adminSavePlan = createServerFn({ method: "POST" })
       : await admin.from("plans").insert(payload);
       
     if (res.error) throw new Error(res.error.message);
-    await logAdminAction(admin, context.userId, data.id ? "plan.update" : "plan.create", "plans", res.data?.id ?? null, payload);
+    await logAdminAction(admin, context!.userId, data.id ? "plan.update" : "plan.create", "plans", res.data?.id ?? null, payload);
     return { ok: true };
   });
 
@@ -146,7 +146,7 @@ export const adminUpdateSubscription = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { adminClient, assertPlatformAdmin, logAdminAction } = await import("@/lib/admin.server");
     const admin = await adminClient();
-    await assertPlatformAdmin(admin, context.userId);
+    await assertPlatformAdmin(admin, context!.userId);
     return { ok: true };
   });
 
@@ -156,11 +156,11 @@ export const adminSendSupportMessage = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { adminClient, assertPlatformAdmin, logAdminAction } = await import("@/lib/admin.server");
     const admin = await adminClient();
-    await assertPlatformAdmin(admin, context.userId);
+    await assertPlatformAdmin(admin, context!.userId);
     
     const { error } = await admin.from("notifications").insert({
         workspace_id: data.workspaceId,
-        user_id: context.userId,
+        user_id: context!.userId,
         title: data.title,
         body: data.body,
     });
@@ -174,7 +174,7 @@ export const adminListAudit = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { adminClient, assertPlatformAdmin } = await import("@/lib/admin.server");
     const admin = await adminClient();
-    await assertPlatformAdmin(admin, context.userId);
+    await assertPlatformAdmin(admin, context!.userId);
     const { data: rows, error } = await admin.from("audit_logs").select("*");
     if (error) throw new Error(error.message);
     return rows ?? [];

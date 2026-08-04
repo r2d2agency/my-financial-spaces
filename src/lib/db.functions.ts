@@ -39,7 +39,13 @@ export const dbQuery = createServerFn({ method: "POST" })
         const clauses = Object.entries(data.filters).map(([key, val]) => {
           if (val === null) return `${key} IS NULL`;
           
-          // Suporte a operadores no key
+          // Suporte a operadores no key (e.g. "workspace_id(id, name)")
+          if (key.includes('(')) {
+            // Se for um join simulado como "workspaces(id, name)"
+            // No momento, o db-browser envia isso para SELECT columns, mas se vier em filters tratamos aqui.
+            // Para simplificar, focamos nos operadores de comparação.
+          }
+
           const parts = key.split(' ');
           if (parts.length > 1) {
             const field = parts[0];
@@ -135,7 +141,6 @@ export const dbQuery = createServerFn({ method: "POST" })
           return res.rows;
         }
       } catch (rpcErr) {
-        // Log sensitive details only on server, never return to client
         console.error(`RPC Error (${data.rpcName}):`, rpcErr);
         if (rpcErr instanceof Error) {
           throw new Error(`Erro no Banco: ${rpcErr.message}`);

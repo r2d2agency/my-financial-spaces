@@ -36,11 +36,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     queryFn: async () => {
       const { data, error } = await db
         .from("workspace_members")
-        .select("workspace_id, role, hide_balances, workspaces(id, name, expected_income, onboarding_done)")
+        .select("*")
         .order("created_at", { ascending: true })
         .execute();
       if (error) throw error;
-      return (data ?? []) as unknown as Membership[];
+      
+      // Enriquecer manualmente para simular o join workspaces(...) removido para evitar erro de sintaxe SQL puro
+      const memberships = (data ?? []) as any[];
+      for (const m of memberships) {
+        const { data: ws } = await db.from("workspaces").select("*").eq("id", m.workspace_id).maybeSingle();
+        m.workspaces = ws;
+      }
+      return memberships as unknown as Membership[];
     },
   });
 
