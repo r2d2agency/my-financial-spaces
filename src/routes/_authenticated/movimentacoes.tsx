@@ -65,7 +65,7 @@ function Movimentacoes() {
       const [accounts, categories, costCenters, cards] = await Promise.all([
         db.from("financial_accounts").select("id, name").eq("workspace_id", wsId!).execute(),
         db.from("categories").select("id, name, kind, subcategory_of").eq("workspace_id", wsId!).execute(),
-        db.from("cost_centers").select("id, name").eq("workspace_id", wsId!).execute(),
+        db.from("cost_centers").select("id, name, parent_id").eq("workspace_id", wsId!).execute(),
         db.from("credit_cards").select("id, name").eq("workspace_id", wsId!).eq("archived", false).execute(),
       ]);
       return { 
@@ -83,9 +83,9 @@ function Movimentacoes() {
     queryFn: async () => {
       const { data, error } = await db
         .from("transactions")
-        .select("id, type, description, amount, status, competence_date, category_id, is_estimated, recurring_id")
+        .select("id, type, description, amount, status, competence_date, category_id, is_estimated, recurring_id, nature")
         .eq("workspace_id", wsId!)
-        .execute(); // Simplificando para o db-browser básico
+        .execute();
       if (error) throw error;
       return data ?? [];
     },
@@ -200,10 +200,11 @@ function Movimentacoes() {
   });
 
   const createCostCenter = useMutation({
-    mutationFn: async (name: string) => {
+    mutationFn: async ({ name, parent_id }: { name: string; parent_id?: string | null }) => {
       const { data, error } = await db.from("cost_centers").insert({
         workspace_id: wsId!,
-        name: name.trim()
+        name: name.trim(),
+        parent_id: parent_id || null
       });
       if (error) throw error;
       return data;
@@ -388,7 +389,12 @@ function Movimentacoes() {
                             onClick={(e) => {
                               e.preventDefault();
                               const name = window.prompt("Nome do centro de custo:");
-                              if (name) createCostCenter.mutate(name);
+                              if (name) {
+                                const parentId = window.confirm("É um subcentro de custo? Clique OK para selecionar o pai.") 
+                                  ? window.prompt("Digite o ID do centro de custo pai (ou deixe vazio):") 
+                                  : null;
+                                createCostCenter.mutate({ name, parent_id: parentId });
+                              }
                             }}
                           >
                             <Plus className="size-3" />
@@ -398,7 +404,9 @@ function Movimentacoes() {
                           <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
                           <SelectContent>
                             {(meta as any)?.costCenters?.map((cc: any) => (
-                              <SelectItem key={cc.id} value={cc.id}>{cc.name}</SelectItem>
+                              <SelectItem key={cc.id} value={cc.id}>
+                                {cc.parent_id ? "  └ " : ""}{cc.name}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -553,6 +561,8 @@ function Movimentacoes() {
                   {t.person_name && <span className="ml-2 font-medium text-foreground">({t.person_name})</span>}
                   {t.recurring_id && <span className="ml-2 text-[10px] uppercase tracking-wider text-primary font-bold">● Recorrente</span>}
                   {t.is_estimated && <span className="ml-2 text-[10px] uppercase tracking-wider text-amber-500 font-bold">● Estimado</span>}
+                  {t.nature === 'refund' && <span className="ml-2 text-[10px] uppercase tracking-wider text-emerald-500 font-bold">● Estorno</span>}
+                  {t.nature === 'reversal' && <span className="ml-2 text-[10px] uppercase tracking-wider text-red-500 font-bold">● Reembolso</span>}
                 </p>
               </div>
               <div className="flex items-center gap-3">
