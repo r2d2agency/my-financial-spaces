@@ -203,6 +203,8 @@ export async function initializeDatabase() {
           installments_total INTEGER NOT NULL DEFAULT 1,
           due_day INTEGER NOT NULL DEFAULT 10,
           status public.debt_status NOT NULL DEFAULT 'active',
+          person_name TEXT,
+          is_parcelled BOOLEAN NOT NULL DEFAULT false,
           created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
 
@@ -370,6 +372,11 @@ export async function initializeDatabase() {
         ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS day_of_month INTEGER NOT NULL DEFAULT 5;
         ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL;
         ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS account_id UUID REFERENCES public.financial_accounts(id) ON DELETE SET NULL;
+
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS person_name TEXT;
+        ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS person_name TEXT;
+        ALTER TABLE public.debts ADD COLUMN IF NOT EXISTS person_name TEXT;
+        ALTER TABLE public.debts ADD COLUMN IF NOT EXISTS is_parcelled BOOLEAN NOT NULL DEFAULT false;
       `;
 
       await query(sql);
