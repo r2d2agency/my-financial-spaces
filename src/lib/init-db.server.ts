@@ -379,6 +379,24 @@ export async function initializeDatabase() {
         ALTER TABLE public.debts ADD COLUMN IF NOT EXISTS person_name TEXT;
         ALTER TABLE public.debts ADD COLUMN IF NOT EXISTS is_parcelled BOOLEAN NOT NULL DEFAULT false;
 
+        -- Sprint B: Orçamentos
+        CREATE TABLE IF NOT EXISTS public.budgets (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+          category_id UUID NOT NULL REFERENCES public.categories(id) ON DELETE CASCADE,
+          amount NUMERIC(14,2) NOT NULL,
+          period_month INTEGER NOT NULL, -- 1-12
+          period_year INTEGER NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          UNIQUE (workspace_id, category_id, period_month, period_year)
+        );
+
+        -- Sprint B: Metas Financeiras (Aprimoramento)
+        ALTER TABLE public.financial_goals ADD COLUMN IF NOT EXISTS target_date DATE;
+        ALTER TABLE public.financial_goals ADD COLUMN IF NOT EXISTS color TEXT;
+        ALTER TABLE public.financial_goals ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT false;
+
+
         -- Sprint A: Subcategorias e Tags
         ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS subcategory_of UUID REFERENCES public.categories(id) ON DELETE SET NULL;
         
