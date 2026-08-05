@@ -388,7 +388,12 @@ function Movimentacoes() {
                             onClick={(e) => {
                               e.preventDefault();
                               const name = window.prompt("Nome do centro de custo:");
-                              if (name) createCostCenter.mutate(name);
+                              if (name) {
+                                const parentId = window.confirm("É um subcentro de custo? Clique OK para selecionar o pai.") 
+                                  ? window.prompt("Digite o ID do centro de custo pai (ou deixe vazio):") 
+                                  : null;
+                                createCostCenter.mutate({ name, parent_id: parentId });
+                              }
                             }}
                           >
                             <Plus className="size-3" />
