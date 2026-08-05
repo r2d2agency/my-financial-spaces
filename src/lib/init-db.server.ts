@@ -400,6 +400,20 @@ export async function initializeDatabase() {
         ALTER TABLE public.financial_goals ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT false;
 
 
+        -- Sprint C: Ciclo de Faturas de Cartão
+        CREATE TABLE IF NOT EXISTS public.credit_card_bills (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+          card_id UUID NOT NULL REFERENCES public.credit_cards(id) ON DELETE CASCADE,
+          amount NUMERIC(14,2) NOT NULL,
+          period_month INTEGER NOT NULL,
+          period_year INTEGER NOT NULL,
+          status TEXT NOT NULL DEFAULT 'open', -- 'open', 'paid'
+          paid_at TIMESTAMPTZ,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          UNIQUE (card_id, period_month, period_year)
+        );
+
         -- Sprint A: Subcategorias e Tags
         ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS subcategory_of UUID REFERENCES public.categories(id) ON DELETE SET NULL;
         

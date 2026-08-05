@@ -51,6 +51,7 @@ function Movimentacoes() {
     account_id: "",
     to_account_id: "", // Sprint A: Transferência
     category_id: "",
+    card_id: "", // Sprint C
     is_recurring: false,
     recurring_type: "fixed",
     person_name: "",
@@ -61,15 +62,17 @@ function Movimentacoes() {
     queryKey: ["meta", wsId],
     enabled: !!wsId,
     queryFn: async () => {
-      const [accounts, categories, costCenters] = await Promise.all([
+      const [accounts, categories, costCenters, cards] = await Promise.all([
         db.from("financial_accounts").select("id, name").eq("workspace_id", wsId!).execute(),
         db.from("categories").select("id, name, kind, subcategory_of").eq("workspace_id", wsId!).execute(),
         db.from("cost_centers").select("id, name").eq("workspace_id", wsId!).execute(),
+        db.from("credit_cards").select("id, name").eq("workspace_id", wsId!).eq("archived", false).execute(),
       ]);
       return { 
         accounts: accounts.data ?? [], 
         categories: categories.data ?? [],
-        costCenters: costCenters.data ?? [] 
+        costCenters: costCenters.data ?? [],
+        cards: cards.data ?? []
       };
     },
   });
@@ -134,6 +137,7 @@ function Movimentacoes() {
         paid_date: form.status === "paid" ? form.competence_date : null,
         account_id: form.account_id || null,
         category_id: form.category_id || null,
+        card_id: form.card_id || null, // Sprint C
         created_by: me?.id,
         recurring_id: recurring_id,
         person_name: form.person_name.trim() || null,
@@ -399,6 +403,26 @@ function Movimentacoes() {
                           </SelectContent>
                         </Select>
                       </div>
+                    </div>
+                  )}
+                  
+                  {form.type === "expense" && (
+                    <div className="space-y-1">
+                      <Label>Cartão de Crédito</Label>
+                      <Select value={form.card_id} onValueChange={(v) => setForm((f) => ({ ...f, card_id: v }))}>
+                        <SelectTrigger><SelectValue placeholder="Opcional (Lançar em cartão)" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhum</SelectItem>
+                          {(meta as any)?.cards?.map((c: any) => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {form.card_id && form.card_id !== 'none' && (
+                        <p className="text-[10px] text-muted-foreground italic">
+                          Lançamento pendente no cartão até o pagamento da fatura.
+                        </p>
+                      )}
                     </div>
                   )}
                   
