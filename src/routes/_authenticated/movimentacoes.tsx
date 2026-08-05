@@ -398,7 +398,9 @@ function Movimentacoes() {
                           <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
                           <SelectContent>
                             {(meta as any)?.costCenters?.map((cc: any) => (
-                              <SelectItem key={cc.id} value={cc.id}>{cc.name}</SelectItem>
+                              <SelectItem key={cc.id} value={cc.id}>
+                                {cc.parent_id ? "  └ " : ""}{cc.name}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
