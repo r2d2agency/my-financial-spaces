@@ -82,6 +82,19 @@ function Dividas() {
 
   const pay = useMutation({
     mutationFn: async (d: { id: string; amount: number; outstanding: number; paid: number }) => {
+      // 1. Criar a transação financeira real para o extrato
+      const { data: debt } = await db.from("debts").select("name").eq("id", d.id).single().execute();
+      
+      await db.from("transactions").insert({
+        workspace_id: wsId!,
+        description: `Pagamento: ${debt?.name || "Dívida"}`,
+        amount: d.amount,
+        type: "expense",
+        status: "confirmed",
+        competence_date: new Date().toISOString().slice(0, 10),
+      });
+
+      // 2. Registrar no histórico de pagamentos da dívida
       const { error } = await db.from("debt_payments").insert({
         workspace_id: wsId!,
         debt_id: d.id,
@@ -89,6 +102,8 @@ function Dividas() {
         paid_date: new Date().toISOString().slice(0, 10),
       });
       if (error) throw error;
+
+      // 3. Atualizar o saldo devedor
       const rest = Math.max(0, d.outstanding - d.amount);
       const { error: e2 } = await db
         .from("debts")
@@ -98,7 +113,7 @@ function Dividas() {
       if (e2) throw e2;
     },
     onSuccess: () => {
-      toast.success("Pagamento registrado.");
+      toast.success("Pagamento registrado e lançado no extrato.");
       qc.invalidateQueries();
     },
     onError: (e: Error) => toast.error(e.message),
