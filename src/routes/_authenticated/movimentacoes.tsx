@@ -151,10 +151,10 @@ function Movimentacoes() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const createCategory = useMutation({
+  const createCategory: any = useMutation({
     mutationFn: async () => {
       if (!newCatName.trim()) throw new Error("Informe o nome da categoria");
-      const parentId = (createCategory as any).parent_id;
+      const parentId: any = createCategory.parent_id;
       const { data, error } = await db.from("categories").insert({
         workspace_id: wsId!,
         name: newCatName.trim(),
