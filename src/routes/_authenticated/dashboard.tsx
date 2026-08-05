@@ -118,15 +118,18 @@ function Dashboard() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Saldo estimado", value: money(balance) },
-          { label: "Receitas do mês", value: money(income) },
-          { label: "Despesas do mês", value: money(expense) },
-          { label: "A pagar (pendente)", value: money(pending) },
+          { label: "Saldo estimado", value: money(balance), trend: "Disponível em conta" },
+          { label: "Receitas do mês", value: money(income), trend: "Entradas confirmadas" },
+          { label: "Despesas do mês", value: money(expense), trend: "Saídas confirmadas" },
+          { label: "Uso do Orçamento", value: `${data?.budgets?.length ? Math.round((expense / data.budgets.reduce((s: number, b: any) => s + num(b.amount), 0)) * 100) : 0}%`, trend: "vs planejado" },
         ].map((k) => (
-          <Card key={k.label}>
-            <CardContent className="pt-6">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">{k.label}</p>
-              <p className="mt-1 text-2xl font-semibold text-foreground">{k.value}</p>
+          <Card key={k.label} className="overflow-hidden border-none bg-background shadow-sm ring-1 ring-border">
+            <CardContent className="p-5">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{k.label}</p>
+              <div className="mt-2 flex items-baseline justify-between">
+                <p className="text-2xl font-bold tracking-tight text-foreground">{k.value}</p>
+              </div>
+              <p className="mt-1 text-[10px] text-muted-foreground">{k.trend}</p>
             </CardContent>
           </Card>
         ))}
@@ -191,21 +194,29 @@ function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Metas</CardTitle>
+        <Card className="lg:col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-base font-semibold">Metas Financeiras</CardTitle>
+            <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-xs">
+              <Link to="/planejamento">Ver mais</Link>
+            </Button>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            {(data?.goals ?? []).length === 0 && <p className="text-muted-foreground">Nenhuma meta cadastrada.</p>}
+          <CardContent className="space-y-4 text-sm">
+            {(data?.goals ?? []).length === 0 && <p className="text-muted-foreground">Nenhuma meta ativa.</p>}
             {(data?.goals ?? []).map((g: any) => {
               const pct = num(g.target_amount) > 0 ? (num(g.current_amount) / num(g.target_amount)) * 100 : 0;
               return (
                 <div key={g.id}>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>{g.name}</span>
-                    <span>{Math.min(100, Math.round(pct))}%</span>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="font-medium text-foreground">{g.name}</span>
+                    <span className="text-muted-foreground">{money(num(g.current_amount))} / {money(num(g.target_amount))}</span>
                   </div>
-                  <Progress value={Math.min(100, pct)} className="mt-1" />
+                  <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+                    <div 
+                      className="h-full bg-primary transition-all"
+                      style={{ width: `${Math.min(100, pct)}%`, backgroundColor: g.color || 'hsl(var(--primary))' }}
+                    />
+                  </div>
                 </div>
               );
             })}
