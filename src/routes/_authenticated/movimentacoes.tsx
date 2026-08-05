@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { db } from "@/lib/db-browser";
 import { useWorkspace } from "@/lib/workspace";
-import { TX_TYPES, brl, iso, monthLabel, monthRange, num, addMonths, isIncomeType } from "@/lib/finance";
+import { TX_TYPES, brl, iso, monthLabel, monthRange, num, addMonths, isIncomeType, ACCOUNT_KINDS } from "@/lib/finance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,21 +49,28 @@ function Movimentacoes() {
     competence_date: iso(new Date()),
     status: "pending",
     account_id: "",
+    to_account_id: "", // Sprint A: Transferência
     category_id: "",
     is_recurring: false,
-    recurring_type: "fixed", // "fixed" ou "variable" (estimated)
+    recurring_type: "fixed",
     person_name: "",
+    cost_center_id: "", // Sprint A
   });
 
   const { data: meta } = useQuery({
     queryKey: ["meta", wsId],
     enabled: !!wsId,
     queryFn: async () => {
-      const [accounts, categories] = await Promise.all([
+      const [accounts, categories, costCenters] = await Promise.all([
         db.from("financial_accounts").select("id, name").eq("workspace_id", wsId!).execute(),
-        db.from("categories").select("id, name, kind").eq("workspace_id", wsId!).execute(),
+        db.from("categories").select("id, name, kind, subcategory_of").eq("workspace_id", wsId!).execute(),
+        db.from("cost_centers").select("id, name").eq("workspace_id", wsId!).execute(),
       ]);
-      return { accounts: accounts.data ?? [], categories: categories.data ?? [] };
+      return { 
+        accounts: accounts.data ?? [], 
+        categories: categories.data ?? [],
+        costCenters: costCenters.data ?? [] 
+      };
     },
   });
 
@@ -85,6 +92,19 @@ function Movimentacoes() {
     mutationFn: async () => {
       const me = await getUser({});
       const amount = num(form.amount);
+
+      if (form.type === "transfer") {
+        const { error } = await db.rpc("execute_transfer", {
+          from_account_id: form.account_id,
+          to_account_id: form.to_account_id,
+          amount,
+          description: form.description.trim(),
+          date: form.competence_date,
+          workspace_id: wsId!
+        });
+        if (error) throw error;
+        return;
+      }
       
       let recurring_id = null;
       if (form.is_recurring) {
@@ -98,6 +118,7 @@ function Movimentacoes() {
           account_id: form.account_id || null,
           person_name: form.person_name.trim() || null,
           day_of_month: new Date(form.competence_date).getDate() || 5,
+          cost_center_id: form.cost_center_id || null,
         });
         if (recErr) throw recErr;
         recurring_id = rec.id;
@@ -117,6 +138,7 @@ function Movimentacoes() {
         recurring_id: recurring_id,
         person_name: form.person_name.trim() || null,
         is_estimated: form.is_recurring && form.recurring_type === "variable",
+        cost_center_id: form.cost_center_id || null,
       });
       if (error) throw error;
     },
@@ -156,7 +178,7 @@ function Movimentacoes() {
       const { data, error } = await db.from("financial_accounts").insert({
         workspace_id: wsId!,
         name: newAccName.trim(),
-        type: "checking"
+        kind: "checking"
       });
       if (error) throw error;
       return data;
@@ -167,6 +189,22 @@ function Movimentacoes() {
       setNewAccName("");
       qc.invalidateQueries({ queryKey: ["meta", wsId] });
       setForm(f => ({ ...f, account_id: data.id }));
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const createCostCenter = useMutation({
+    mutationFn: async (name: string) => {
+      const { data, error } = await db.from("cost_centers").insert({
+        workspace_id: wsId!,
+        name: name.trim()
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Centro de custo criado.");
+      qc.invalidateQueries({ queryKey: ["meta", wsId] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -267,7 +305,7 @@ function Movimentacoes() {
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <Label>Conta</Label>
+                        <Label>{form.type === "transfer" ? "Conta de Origem" : "Conta"}</Label>
                         <Button 
                           variant="ghost" 
                           size="icon" 
@@ -289,31 +327,78 @@ function Movimentacoes() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <Label>Categoria</Label>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-5 w-5" 
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setNewCatOpen(true);
-                          }}
-                        >
-                          <Plus className="size-3" />
-                        </Button>
+
+                    {form.type === "transfer" ? (
+                      <div className="space-y-1">
+                        <Label>Conta de Destino</Label>
+                        <Select value={form.to_account_id} onValueChange={(v) => setForm((f) => ({ ...f, to_account_id: v }))}>
+                          <SelectTrigger><SelectValue placeholder="Selecione o destino" /></SelectTrigger>
+                          <SelectContent>
+                            {(meta as any)?.accounts.filter((a: any) => a.id !== form.account_id).map((a: any) => (
+                              <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <Select value={form.category_id} onValueChange={(v) => setForm((f) => ({ ...f, category_id: v }))}>
-                        <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
-                        <SelectContent>
-                          {(meta as any)?.categories.map((c: any) => (
-                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <Label>Categoria</Label>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-5 w-5" 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setNewCatOpen(true);
+                            }}
+                          >
+                            <Plus className="size-3" />
+                          </Button>
+                        </div>
+                        <Select value={form.category_id} onValueChange={(v) => setForm((f) => ({ ...f, category_id: v }))}>
+                          <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                          <SelectContent>
+                            {(meta as any)?.categories.map((c: any) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.subcategory_of ? "  └ " : ""}{c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
+                  
+                  {form.type !== "transfer" && (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <Label>Centro de Custo</Label>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-5 w-5" 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              const name = window.prompt("Nome do centro de custo:");
+                              if (name) createCostCenter.mutate(name);
+                            }}
+                          >
+                            <Plus className="size-3" />
+                          </Button>
+                        </div>
+                        <Select value={form.cost_center_id} onValueChange={(v) => setForm((f) => ({ ...f, cost_center_id: v }))}>
+                          <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                          <SelectContent>
+                            {(meta as any)?.costCenters?.map((cc: any) => (
+                              <SelectItem key={cc.id} value={cc.id}>{cc.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="flex items-center gap-4 py-2">
                     <div className="flex items-center gap-2">
