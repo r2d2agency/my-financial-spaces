@@ -8,7 +8,7 @@ O **Espaço Financeiro** é uma plataforma SaaS de gestão financeira pessoal e 
 
 ### Status Atual (MVP):
 - **Infraestrutura**: PostgreSQL Local no EasyPanel, Docker/Nitro.
-- **Autenticação**: Sistema local de sessões e usuários.
+- **Autenticação**: Sistema local de sessões e usuários (`auth.users`, `user_sessions`).
 - **Multiusuário**: Workspaces isolados com membros e permissões.
 - **Lançamentos**: Receitas, despesas, transferências, parcelamentos e nomes de clientes/fornecedores.
 - **Recorrência**: Suporte a gastos fixos e variáveis (estimativas).
