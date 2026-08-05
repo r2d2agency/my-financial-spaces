@@ -274,6 +274,18 @@ export async function initializeDatabase() {
           updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
 
+        CREATE TABLE IF NOT EXISTS public.contacts (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          document TEXT,
+          email TEXT,
+          phone TEXT,
+          kind TEXT DEFAULT 'both', -- 'client', 'vendor', 'both'
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+
         -- 4. GESTÃO DE SESSÕES
         CREATE TABLE IF NOT EXISTS public.user_sessions (
             id UUID PRIMARY KEY,
