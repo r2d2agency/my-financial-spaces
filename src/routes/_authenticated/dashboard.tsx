@@ -39,7 +39,7 @@ function Dashboard() {
     queryKey: ["dashboard", wsId, iso(start)],
     enabled: !!wsId,
     queryFn: async () => {
-      const [tx, accounts, cards, debts, goals] = await Promise.all([
+      const results = await Promise.all([
         db.from("transactions")
           .select("type, amount, status, competence_date, description, due_date")
           .eq("workspace_id", wsId!)
@@ -52,14 +52,14 @@ function Dashboard() {
         db.from("financial_goals").select("id, name, target_amount, current_amount, color").eq("workspace_id", wsId!).eq("archived", false).execute(),
         db.from("budgets").select("amount, category_id").eq("workspace_id", wsId!).eq("period_month", now.getMonth() + 1).eq("period_year", now.getFullYear()).execute(),
       ]);
-      if (tx.error) throw tx.error;
+      
       return {
-        tx: tx.data ?? [],
-        accounts: accounts.data ?? [],
-        cards: cards.data ?? [],
-        debts: debts.data ?? [],
-        goals: goals.data ?? [],
-        budgets: (arguments[0] as any).budgets ?? [], // Simple way to inject the new promise result if we refactored
+        tx: results[0].data ?? [],
+        accounts: results[1].data ?? [],
+        cards: results[2].data ?? [],
+        debts: results[3].data ?? [],
+        goals: results[4].data ?? [],
+        budgets: results[5].data ?? [],
       };
     },
   });
