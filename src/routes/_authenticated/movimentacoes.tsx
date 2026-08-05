@@ -157,7 +157,8 @@ function Movimentacoes() {
       const { data, error } = await db.from("categories").insert({
         workspace_id: wsId!,
         name: newCatName.trim(),
-        kind: form.type === "income" ? "income" : "expense"
+        kind: form.type === "income" ? "income" : "expense",
+        subcategory_of: (createCategory as any).parent_id && (createCategory as any).parent_id !== 'none' ? (createCategory as any).parent_id : null
       });
       if (error) throw error;
       return data;
@@ -461,6 +462,21 @@ function Movimentacoes() {
                 onChange={(e) => setNewCatName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && createCategory.mutate()}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Categoria pai (opcional)</Label>
+              <Select onValueChange={(v) => {
+                // Adicionaremos o parent_id na mutação
+                (createCategory as any).parent_id = v;
+              }}>
+                <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  {(meta as any)?.categories.filter((c: any) => !c.subcategory_of).map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

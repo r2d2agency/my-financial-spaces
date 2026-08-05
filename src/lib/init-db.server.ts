@@ -5,7 +5,7 @@ export async function initializeDatabase() {
   
   try {
     // Force re-run for now to ensure all missing tables are created if user is stuck
-    if (true) {
+    if (true) { // Garantir execução das novas tabelas do Sprint A
       console.log("Database verification/initialization running...");
       
       // SQL for full schema initialization
