@@ -5,7 +5,7 @@ export async function initializeDatabase() {
   
   try {
     // Force re-run for now to ensure all missing tables are created if user is stuck
-    if (true) {
+    if (true) { // Garantir execução das novas tabelas do Sprint A
       console.log("Database verification/initialization running...");
       
       // SQL for full schema initialization
@@ -17,6 +17,7 @@ export async function initializeDatabase() {
         CREATE TABLE IF NOT EXISTS auth.users (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             email TEXT UNIQUE,
+            password_hash TEXT,
             raw_user_meta_data JSONB DEFAULT '{}'::jsonb,
             created_at TIMESTAMPTZ DEFAULT NOW()
         );
@@ -377,6 +378,41 @@ export async function initializeDatabase() {
         ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS person_name TEXT;
         ALTER TABLE public.debts ADD COLUMN IF NOT EXISTS person_name TEXT;
         ALTER TABLE public.debts ADD COLUMN IF NOT EXISTS is_parcelled BOOLEAN NOT NULL DEFAULT false;
+
+        -- Sprint A: Subcategorias e Tags
+        ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS subcategory_of UUID REFERENCES public.categories(id) ON DELETE SET NULL;
+        
+        CREATE TABLE IF NOT EXISTS public.tags (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          color TEXT,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          UNIQUE (workspace_id, name)
+        );
+
+        CREATE TABLE IF NOT EXISTS public.transaction_tags (
+          transaction_id UUID NOT NULL REFERENCES public.transactions(id) ON DELETE CASCADE,
+          tag_id UUID NOT NULL REFERENCES public.tags(id) ON DELETE CASCADE,
+          PRIMARY KEY (transaction_id, tag_id)
+        );
+
+        -- Centros de Custo
+        CREATE TABLE IF NOT EXISTS public.cost_centers (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS cost_center_id UUID REFERENCES public.cost_centers(id) ON DELETE SET NULL;
+        ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS cost_center_id UUID REFERENCES public.cost_centers(id) ON DELETE SET NULL;
+        
+        -- Transferências
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS transfer_id UUID; -- Para ligar os dois lados da transferência
+        
+        -- Migração de senha (segurança)
+        ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS password_hash TEXT;
       `;
 
       await query(sql);

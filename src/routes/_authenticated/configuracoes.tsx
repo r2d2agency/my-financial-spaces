@@ -126,7 +126,7 @@ function Configuracoes() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20">
       <h1 className="text-2xl font-bold tracking-tight text-foreground">Configurações</h1>
 
       <Card id="gerir-espaco">
@@ -293,9 +293,19 @@ function Configuracoes() {
         </>
       )}
 
-      <div className="pt-4">
-        <Button asChild variant="outline">
+      <div className="pt-4 flex flex-col gap-4">
+        <Button asChild variant="outline" className="w-full sm:w-fit">
           <Link to="/onboarding">Criar novo espaço</Link>
+        </Button>
+        <Button 
+          variant="outline" 
+          className="w-full sm:w-fit"
+          onClick={() => {
+            localStorage.removeItem("auth_token");
+            window.location.href = "/auth";
+          }}
+        >
+          Sair da conta
         </Button>
       </div>
     </div>

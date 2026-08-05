@@ -140,6 +140,27 @@ export const dbQuery = createServerFn({ method: "POST" })
           const res = await query("SELECT * FROM public.list_ws_members($1::uuid)", [data.rpcArgs._ws]);
           return res.rows;
         }
+        // Sprint A: Transferência entre contas
+        if (data.rpcName === "execute_transfer") {
+          const { from_account_id, to_account_id, amount, description, date, workspace_id } = data.rpcArgs;
+          const transfer_id = crypto.randomUUID();
+          
+          // Lado da Saída
+          await query(
+            `INSERT INTO public.transactions (workspace_id, type, description, amount, status, competence_date, account_id, created_by, transfer_id) 
+             VALUES ($1, 'transfer', $2, $3, 'paid', $4, $5, $6, $7)`,
+            [workspace_id, description, -Math.abs(amount), date, from_account_id, userId, transfer_id]
+          );
+
+          // Lado da Entrada
+          await query(
+            `INSERT INTO public.transactions (workspace_id, type, description, amount, status, competence_date, account_id, created_by, transfer_id) 
+             VALUES ($1, 'transfer', $2, $3, 'paid', $4, $5, $6, $7)`,
+            [workspace_id, description, Math.abs(amount), date, to_account_id, userId, transfer_id]
+          );
+          
+          return { success: true, transfer_id };
+        }
       } catch (rpcErr) {
         console.error(`RPC Error (${data.rpcName}):`, rpcErr);
         if (rpcErr instanceof Error) {
