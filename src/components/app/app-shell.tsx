@@ -29,6 +29,8 @@ import {
   Wallet,
   Bell,
   ShieldCheck,
+  Tag,
+  Users,
 } from "lucide-react";
 import { QuickTransaction } from "./quick-transaction";
 
