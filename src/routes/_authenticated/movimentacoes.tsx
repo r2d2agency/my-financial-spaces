@@ -65,7 +65,7 @@ function Movimentacoes() {
       const [accounts, categories, costCenters, cards] = await Promise.all([
         db.from("financial_accounts").select("id, name").eq("workspace_id", wsId!).execute(),
         db.from("categories").select("id, name, kind, subcategory_of").eq("workspace_id", wsId!).execute(),
-        db.from("cost_centers").select("id, name").eq("workspace_id", wsId!).execute(),
+        db.from("cost_centers").select("id, name, parent_id").eq("workspace_id", wsId!).execute(),
         db.from("credit_cards").select("id, name").eq("workspace_id", wsId!).eq("archived", false).execute(),
       ]);
       return { 
