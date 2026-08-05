@@ -36,11 +36,16 @@ function Cartoes() {
     queryKey: ["cards", wsId],
     enabled: !!wsId,
     queryFn: async () => {
-      const [cards, tx] = await Promise.all([
+      const [cards, tx, bills] = await Promise.all([
         db.from("credit_cards").select("*").eq("workspace_id", wsId!).eq("archived", false).order("name").execute(),
-        db.from("transactions").select("amount, card_id, status").eq("workspace_id", wsId!).not("card_id", "is", null).execute(),
+        db.from("transactions").select("amount, card_id, status, competence_date, description").eq("workspace_id", wsId!).not("card_id", "is", null).execute(),
+        db.from("credit_card_bills").select("*").eq("workspace_id", wsId!).execute(),
       ]);
-      return { cards: cards.data ?? [], tx: tx.data ?? [] };
+      return { 
+        cards: cards.data ?? [], 
+        tx: tx.data ?? [],
+        bills: bills.data ?? []
+      };
     },
   });
 
@@ -60,6 +65,41 @@ function Cartoes() {
       toast.success("Cartão criado.");
       setOpen(false);
       setF({ name: "", brand: "", credit_limit: "", closing_day: "1", due_day: "10" });
+      qc.invalidateQueries();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const payBill = useMutation({
+    mutationFn: async (p: { card_id: string; amount: number; month: number; year: number }) => {
+      // 1. Criar transação de pagamento de fatura no extrato (saída da conta corrente)
+      const { data: card } = await db.from("credit_cards").select("name").eq("id", p.card_id).single().execute();
+      
+      await db.from("transactions").insert({
+        workspace_id: wsId!,
+        description: `Pagamento Fatura: ${card?.name || "Cartão"} (${p.month}/${p.year})`,
+        amount: p.amount,
+        type: "expense",
+        status: "confirmed",
+        competence_date: new Date().toISOString().slice(0, 10),
+      });
+
+      // 2. Marcar a fatura como paga
+      await db.from("credit_card_bills").insert({
+        workspace_id: wsId!,
+        card_id: p.card_id,
+        amount: p.amount,
+        period_month: p.month,
+        period_year: p.year,
+        status: 'paid',
+        paid_at: new Date().toISOString()
+      });
+
+      // 3. Opcional: Marcar transações do período como 'paid' no cartão
+      // Por simplicidade, o saldo "aberto" é calculado dinamicamente
+    },
+    onSuccess: () => {
+      toast.success("Fatura registrada como paga.");
       qc.invalidateQueries();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -112,21 +152,70 @@ function Cartoes() {
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {(data?.cards ?? []).length === 0 && <p className="text-sm text-muted-foreground">Nenhum cartão cadastrado.</p>}
         {(data?.cards ?? []).map((c: any) => {
+          const now = new Date();
+          const currentMonth = now.getMonth() + 1;
+          const currentYear = now.getFullYear();
+
+          // Transações pendentes do cartão
           const used = ((data as any)?.tx ?? []).filter((t: any) => t.card_id === c.id && t.status === "pending").reduce((s: number, t: any) => s + num(t.amount), 0);
+          
+          // Verificar se a fatura atual já foi paga
+          const isBillPaid = ((data as any)?.bills ?? []).some((b: any) => b.card_id === c.id && b.period_month === currentMonth && b.period_year === currentYear && b.status === 'paid');
+
           const pct = num(c.credit_limit) > 0 ? (used / num(c.credit_limit)) * 100 : 0;
+          
           return (
-            <Card key={c.id}>
+            <Card key={c.id} className="relative overflow-hidden">
+              <div className="absolute right-3 top-3">
+                <span className="text-[10px] font-bold uppercase text-muted-foreground opacity-50">{c.brand || 'Card'}</span>
+              </div>
               <CardHeader>
-                <CardTitle className="text-base">{c.name}</CardTitle>
+                <CardTitle className="text-lg">{c.name}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <p>{c.brand ?? "—"} · fecha dia {c.closing_day} · vence dia {c.due_day}</p>
-                <p className="text-foreground">Fatura aberta: {money(used)}</p>
-                <Progress value={Math.min(100, pct)} />
-                <p className="text-xs">Limite {money(num(c.credit_limit))}</p>
+              <CardContent className="space-y-4">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Fatura aberta</span>
+                    <span>Limite {money(num(c.credit_limit))}</span>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">{money(used)}</p>
+                  <Progress value={Math.min(100, pct)} className="h-2" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
+                  <div className="rounded-md bg-muted/50 p-2 text-center">
+                    <p className="uppercase opacity-70">Fechamento</p>
+                    <p className="text-sm font-semibold text-foreground">Dia {c.closing_day}</p>
+                  </div>
+                  <div className="rounded-md bg-muted/50 p-2 text-center">
+                    <p className="uppercase opacity-70">Vencimento</p>
+                    <p className="text-sm font-semibold text-foreground">Dia {c.due_day}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <Button 
+                    variant={isBillPaid ? "outline" : "default"} 
+                    size="sm" 
+                    className="w-full"
+                    disabled={used <= 0 || isBillPaid || payBill.isPending}
+                    onClick={() => payBill.mutate({ card_id: c.id, amount: used, month: currentMonth, year: currentYear })}
+                  >
+                    {isBillPaid ? "Fatura Paga" : "Pagar Fatura"}
+                  </Button>
+                  
+                  <div className="flex justify-center">
+                    <Link 
+                      to="/movimentacoes" 
+                      className="text-[10px] text-muted-foreground hover:text-primary transition-colors underline underline-offset-4"
+                    >
+                      Ver lançamentos deste cartão
+                    </Link>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           );
