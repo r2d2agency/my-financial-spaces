@@ -200,10 +200,11 @@ function Movimentacoes() {
   });
 
   const createCostCenter = useMutation({
-    mutationFn: async (name: string) => {
+    mutationFn: async ({ name, parent_id }: { name: string; parent_id?: string | null }) => {
       const { data, error } = await db.from("cost_centers").insert({
         workspace_id: wsId!,
-        name: name.trim()
+        name: name.trim(),
+        parent_id: parent_id || null
       });
       if (error) throw error;
       return data;
