@@ -2,84 +2,37 @@
 
 # ESPAÇO FINANCEIRO
 
-## 1. Visão Geral
+## VISÃO GERAL
+Plataforma SaaS de gestão financeira multiusuário focada em controle de despesas, planejamento e organização familiar/empresarial.
 
-O **Espaço Financeiro** é uma plataforma SaaS de gestão financeira pessoal e familiar, permitindo que usuários organizem suas próprias finanças e compartilhem a gestão de receitas, despesas, contas, dívidas, metas e patrimônio.
+## ARQUITETURA TÉCNICA
+- **Frontend**: TanStack Start v1 (React 19 + Vite 7).
+- **Backend**: Server Functions (TanStack Start) rodando em Node.js.
+- **Banco de Dados**: PostgreSQL (Puro) gerenciado via `pg.Pool`.
+- **Hospedagem**: EasyPanel (Docker/Self-host).
+- **Autenticação**: Sistema Local com sessões em banco de dados (`user_sessions`).
+- **IA**: OpenAI API (GPT-4o-mini) para processamento de comprovantes via foto.
 
-### Status Atual (MVP):
-- **Infraestrutura**: PostgreSQL Local no EasyPanel, Docker/Nitro.
-- **Autenticação**: Sistema local de sessões e usuários (`auth.users`, `user_sessions`).
-- **Multiusuário**: Workspaces isolados com membros e permissões.
-- **Lançamentos**: Receitas, despesas, transferências, parcelamentos e nomes de clientes/fornecedores.
-- **Recorrência**: Suporte a gastos fixos e variáveis (estimativas).
-- **IA**: Captura de fotos e processamento via OpenAI (gpt-4o-mini).
-- **Relatórios**: Histórico e Projeção para 6 meses.
-- **Admin**: Gestão de clientes, planos e auditoria da plataforma.
+## ESTRUTURA DE DADOS
+- **auth.users**: Credenciais e metadados.
+- **workspaces**: Isolamento de dados por espaço.
+- **transactions**: Lançamentos financeiros (Receitas/Despesas).
+- **recurring_transactions**: Gestão de aluguel, luz, assinaturas (Fixo vs Variável).
+- **debts**: Controle de dívidas e parcelamentos.
+- **categories/accounts**: Organização e saldos.
 
----
+## SPRINT ATUAL: MVP & ESTABILIZAÇÃO
+1. **Puro PostgreSQL**: Remoção completa de Supabase.
+2. **Deploy Automático**: Script de inicialização de tabelas no boot.
+3. **Gestão de Workspaces**: Criação simplificada e isolamento.
+4. **Relatórios**: Visão consolidada de 3 e 6 meses.
+5. **Recorrência**: Suporte a gastos fixos e variáveis com estimativas.
 
-# 2. Objetivos e Módulos Implementados
-
-## 2.1 Dashboard Central
-Visão consolidada de saldo, receitas, despesas e status de metas/dívidas. Gráficos diários de fluxo de caixa.
-
-## 2.2 Movimentações (Lançamentos Rápidos)
-Interface otimizada para lançamentos, incluindo botões de "+" para criar Categorias e Contas instantaneamente.
-Suporte a:
-- **Lançamento Fixo**: Valor constante (Ex: Aluguel).
-- **Lançamento Variável**: Valor estimado que se confirma depois (Ex: Energia).
-- **Parcelamento**: Identificação de compras parceladas.
-- **Vínculo**: Nome do cliente ou fornecedor.
-
-## 2.3 Relatórios e Projeções
-Tela unificada com:
-- Histórico de 6 meses.
-- Projeção de fluxo de caixa para os próximos 6 meses.
-- Distribuição por categoria.
-
-## 2.4 Administração (SaaS Admin)
-Painel exclusivo para gerir a plataforma:
-- Visão geral de novos clientes.
-- Gestão de planos e limites.
-- Auditoria de segurança.
-- Configurações da API OpenAI.
+## ROADMAP SPRINT 2
+- **Cartões de Crédito**: Gestão de faturas e limites.
+- **Metas Financeiras**: Planejamento de sonhos com barra de progresso.
+- **Notificações**: Alertas de contas a vencer.
+- **PWA**: Instalação como "App" no celular.
 
 ---
-
-# 3. Estrutura de Banco de Dados (PostgreSQL)
-
-### Principais Tabelas:
-- `auth.users`: Credenciais e metadados.
-- `public.profiles`: Informações públicas dos usuários.
-- `public.workspaces`: Unidade de isolamento de dados.
-- `public.workspace_members`: Vínculos e papéis (owner, admin, etc).
-- `public.transactions`: Lançamentos financeiros.
-- `public.recurring_transactions`: Configuração de recorrências.
-- `public.debts`: Controle de dívidas e financiamentos.
-- `public.financial_accounts`: Contas bancárias e carteiras.
-- `public.categories`: Classificação de gastos e receitas.
-- `public.platform_configs`: Configurações globais (API Keys).
-
----
-
-# 4. Roadmap de Desenvolvimento (Próximos Passos)
-
-### Sprint Atual: Refinamento de UX e Metas
-1. **Módulo de Metas**: Implementar tela detalhada de acompanhamento de objetivos financeiros.
-2. **Cartões de Crédito**: Gestão de faturas e fechamento automático.
-3. **PWA**: Configuração para instalação como "App" no celular.
-4. **Notificações**: Alertas de vencimento via sistema.
-
----
-
-# 5. Guia de Deploy (EasyPanel)
-
-O sistema está configurado para ser auto-hospedado utilizando Docker.
-- **Dockerfile**: Baseado no preset Nitro node-server.
-- **docker-compose.yml**: Orquestração da App + Banco PostgreSQL.
-- **Variaveis de Ambiente**: DATABASE_URL, OPENAI_API_KEY, VITE_BASE_URL.
-
----
-
-Documentação atualizada em 05/08/2026.
-Para novos módulos, consulte o Roadmap.
+*Este documento é a base para o desenvolvimento do projeto. ja podemos criar? lembra qu e nao temos supabase hein*
