@@ -14,7 +14,7 @@ function LandingPage() {
         <Features />
         <section className="bg-muted/30 py-12 border-y">
           <div className="container mx-auto px-4 text-center">
-            <h3 className="text-lg font-medium mb-4">me confirma que ja temos tudo isso ?</h3>
+            <h3 className="text-lg font-medium mb-4 text-primary animate-pulse">Sprint C em andamento: Gestão de Cartões & Faturas</h3>
             <Link 
               to="/_authenticated/dashboard" 
               className="text-sm text-muted-foreground hover:text-primary transition-colors underline underline-offset-4"
