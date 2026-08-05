@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { query } from "./db.server";
 import { createSession } from "./auth.server";
+import { hashPassword, comparePassword } from "./crypto.server";
 
 export const signUp = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
@@ -20,11 +21,11 @@ export const signUp = createServerFn({ method: "POST" })
       throw new Error("E-mail já cadastrado.");
     }
 
-    // 2. Criar usuário (Nota: em prod usaríamos hashing aqui, mas como é um proxy para o auth.users do Easypanel/Postgres...)
-    // Assumindo que o usuário quer um sistema simplificado que use as tabelas que ele criou no DEPLOY.md
+    // 2. Criar usuário com senha segura (Sprint A)
+    const pwHash = await hashPassword(data.password);
     const userRes = await query(
-      "INSERT INTO auth.users (email, raw_user_meta_data) VALUES ($1, $2) RETURNING id",
-      [data.email, JSON.stringify({ full_name: data.name })]
+      "INSERT INTO auth.users (email, password_hash, raw_user_meta_data) VALUES ($1, $2, $3) RETURNING id",
+      [data.email, pwHash, JSON.stringify({ full_name: data.name })]
     );
     const userId = userRes.rows[0].id;
 
@@ -49,10 +50,16 @@ export const signIn = createServerFn({ method: "POST" })
       .parse(data)
   )
   .handler(async ({ data }) => {
-    const res = await query("SELECT id FROM auth.users WHERE email = $1", [data.email]);
+    const res = await query("SELECT id, password_hash FROM auth.users WHERE email = $1", [data.email]);
     const user = res.rows[0];
-
+    
     if (!user) {
+      throw new Error("Credenciais inválidas.");
+    }
+
+    // Validar senha (Sprint A)
+    const valid = await comparePassword(data.password, user.password_hash || "");
+    if (!valid) {
       throw new Error("Credenciais inválidas.");
     }
 
