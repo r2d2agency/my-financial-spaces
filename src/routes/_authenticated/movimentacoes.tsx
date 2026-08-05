@@ -154,16 +154,17 @@ function Movimentacoes() {
   const createCategory = useMutation({
     mutationFn: async () => {
       if (!newCatName.trim()) throw new Error("Informe o nome da categoria");
+      const parentId = (createCategory as any).parent_id;
       const { data, error } = await db.from("categories").insert({
         workspace_id: wsId!,
         name: newCatName.trim(),
         kind: form.type === "income" ? "income" : "expense",
-        subcategory_of: (createCategory as any).parent_id && (createCategory as any).parent_id !== 'none' ? (createCategory as any).parent_id : null
+        subcategory_of: parentId && parentId !== 'none' ? parentId : null
       });
       if (error) throw error;
-      return data;
+      return data as any;
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       toast.success("Categoria criada.");
       setNewCatOpen(false);
       setNewCatName("");
@@ -182,9 +183,9 @@ function Movimentacoes() {
         kind: "checking"
       });
       if (error) throw error;
-      return data;
+      return data as any;
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       toast.success("Conta criada.");
       setNewAccOpen(false);
       setNewAccName("");
