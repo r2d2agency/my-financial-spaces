@@ -14,7 +14,7 @@ function LandingPage() {
         <Features />
         <section className="bg-muted/30 py-12 border-y">
           <div className="container mx-auto px-4 text-center">
-            <h3 className="text-lg font-medium mb-4 text-primary">Sprint D em andamento: Estornos, Reembolsos e Centro de Custos detalhados</h3>
+            <h3 className="text-lg font-medium mb-4 text-primary">Sprint D concluído: Estornos, Reembolsos e Centros de Custo hierárquicos</h3>
             <Link 
               to="/_authenticated/dashboard" 
               className="text-sm text-muted-foreground hover:text-primary transition-colors underline underline-offset-4"
