@@ -215,6 +215,9 @@ export async function initializeDatabase() {
           name TEXT NOT NULL,
           target_amount NUMERIC(14,2) NOT NULL,
           current_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+          target_date DATE,
+          color TEXT,
+          archived BOOLEAN NOT NULL DEFAULT false,
           created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
 
