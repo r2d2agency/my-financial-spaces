@@ -40,6 +40,8 @@ function Dividas() {
     installments_total: "12",
     installments_paid: "0",
     due_day: "10",
+    person_name: "",
+    is_parcelled: "false",
   });
 
   const { data: debts } = useQuery({
@@ -58,6 +60,8 @@ function Dividas() {
         workspace_id: wsId!,
         name: f.name.trim(),
         creditor: f.creditor.trim() || null,
+        person_name: f.person_name.trim() || null,
+        is_parcelled: f.is_parcelled === "true",
         initial_amount: num(f.outstanding),
         outstanding: num(f.outstanding),
         interest_rate: num(f.interest_rate),
@@ -116,6 +120,25 @@ function Dividas() {
                 <DialogTitle>Nova dívida</DialogTitle>
               </DialogHeader>
               <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1 sm:col-span-2">
+                  <Label>Vínculo (Cliente/Fornecedor)</Label>
+                  <Input 
+                    placeholder="Vincular a uma pessoa ou empresa" 
+                    value={f.person_name} 
+                    onChange={(e) => setF(p => ({ ...p, person_name: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <Label>Tipo de Lançamento</Label>
+                  <select 
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={f.is_parcelled}
+                    onChange={(e) => setF(p => ({ ...p, is_parcelled: e.target.value }))}
+                  >
+                    <option value="false">Recorrente (Ex: Assinatura, Aluguel)</option>
+                    <option value="true">Parcelado (Ex: Empréstimo, Cartão)</option>
+                  </select>
+                </div>
                 {[
                   ["name", "Nome"],
                   ["creditor", "Credor"],
@@ -167,8 +190,13 @@ function Dividas() {
             <Card key={d.id}>
               <CardHeader>
                 <CardTitle className="text-base">
-                  {d.name} {d.status === "paid" && <span className="text-xs text-primary">· quitada</span>}
+                  {d.name} {d.person_name && <span className="text-xs text-muted-foreground">({d.person_name})</span>} {d.status === "paid" && <span className="text-xs text-primary">· quitada</span>}
                 </CardTitle>
+                <div className="flex gap-2">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground border px-1 rounded">
+                    {d.is_parcelled ? "Parcelado" : "Recorrente"}
+                  </span>
+                </div>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-muted-foreground">
                 <p className="text-lg font-semibold text-foreground">{money(num(d.outstanding))}</p>
