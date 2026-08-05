@@ -161,6 +161,30 @@ export const dbQuery = createServerFn({ method: "POST" })
           
           return { success: true, transfer_id };
         }
+        // Sprint B: Salvar Planejamento
+        if (data.rpcName === "save_budget") {
+          const { category_id, amount, month, year, workspace_id } = data.rpcArgs;
+          
+          // Check if exists
+          const existing = await query(
+            "SELECT id FROM public.budgets WHERE workspace_id = $1 AND category_id = $2 AND period_month = $3 AND period_year = $4",
+            [workspace_id, category_id, month, year]
+          );
+
+          if (existing.rows.length > 0) {
+            await query(
+              "UPDATE public.budgets SET amount = $1 WHERE id = $2",
+              [amount, existing.rows[0].id]
+            );
+            return { success: true, id: existing.rows[0].id };
+          } else {
+            const res = await query(
+              "INSERT INTO public.budgets (workspace_id, category_id, amount, period_month, period_year) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+              [workspace_id, category_id, amount, month, year]
+            );
+            return { success: true, id: res.rows[0].id };
+          }
+        }
       } catch (rpcErr) {
         console.error(`RPC Error (${data.rpcName}):`, rpcErr);
         if (rpcErr instanceof Error) {

@@ -30,20 +30,21 @@ function Planejamento() {
   const qc = useQueryClient();
   const [ref, setRef] = useState(() => new Date());
   const { start, end } = monthRange(ref);
-  const month = iso(start);
+  const month = start.getMonth() + 1;
+  const year = start.getFullYear();
 
   const { data } = useQuery({
-    queryKey: ["plan", wsId, month],
+    queryKey: ["plan", wsId, month, year],
     enabled: !!wsId,
     queryFn: async () => {
       const [cats, budgets, tx] = await Promise.all([
         db.from("categories").select("id, name, kind").eq("workspace_id", wsId!).eq("kind", "expense").order("name").execute(),
-        db.from("budgets").select("id, category_id, planned_amount").eq("workspace_id", wsId!).eq("month", month).execute(),
+        db.from("budgets").select("id, category_id, amount").eq("workspace_id", wsId!).eq("period_month", month).eq("period_year", year).execute(),
         db
           .from("transactions")
           .select("amount, category_id, type")
           .eq("workspace_id", wsId!)
-          .gte("competence_date", month)
+          .gte("competence_date", iso(start))
           .lte("competence_date", iso(end))
           .execute(),
       ]);
@@ -53,16 +54,13 @@ function Planejamento() {
 
   const save = useMutation({
     mutationFn: async (p: { category_id: string; planned: number }) => {
-      const existing = ((data as any)?.budgets ?? []).find((b: any) => b.category_id === p.category_id);
-      if (existing) {
-        const { error } = await db.from("budgets").update({ planned_amount: p.planned }).eq("id", existing.id).execute();
-        if (error) throw error;
-      } else {
-        const { error } = await db
-          .from("budgets")
-          .insert({ workspace_id: wsId!, month, category_id: p.category_id, planned_amount: p.planned, kind: "expense" });
-        if (error) throw error;
-      }
+      await db.rpc("save_budget", {
+        workspace_id: wsId!,
+        category_id: p.category_id,
+        amount: p.planned,
+        month,
+        year
+      });
     },
     onSuccess: () => {
       toast.success("Planejamento salvo.");
@@ -71,9 +69,7 @@ function Planejamento() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const realized = (catId: string) =>
-    ((data as any)?.tx ?? []).filter((t: any) => t.category_id === catId && t.type === "expense").reduce((s: number, t: any) => s + num(t.amount), 0);
-  const planned = (catId: string) => num(((data as any)?.budgets ?? []).find((b: any) => b.category_id === catId)?.planned_amount);
+  const planned = (catId: string) => num(((data as any)?.budgets ?? []).find((b: any) => b.category_id === catId)?.amount);
 
   const totalPlan = ((data as any)?.cats ?? []).reduce((s: number, c: any) => s + planned(c.id), 0);
   const totalReal = ((data as any)?.cats ?? []).reduce((s: number, c: any) => s + realized(c.id), 0);
