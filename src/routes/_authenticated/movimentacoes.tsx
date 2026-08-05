@@ -553,6 +553,8 @@ function Movimentacoes() {
                   {t.person_name && <span className="ml-2 font-medium text-foreground">({t.person_name})</span>}
                   {t.recurring_id && <span className="ml-2 text-[10px] uppercase tracking-wider text-primary font-bold">● Recorrente</span>}
                   {t.is_estimated && <span className="ml-2 text-[10px] uppercase tracking-wider text-amber-500 font-bold">● Estimado</span>}
+                  {t.nature === 'refund' && <span className="ml-2 text-[10px] uppercase tracking-wider text-emerald-500 font-bold">● Estorno</span>}
+                  {t.nature === 'reversal' && <span className="ml-2 text-[10px] uppercase tracking-wider text-red-500 font-bold">● Reembolso</span>}
                 </p>
               </div>
               <div className="flex items-center gap-3">
