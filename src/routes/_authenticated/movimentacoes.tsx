@@ -48,6 +48,7 @@ function Movimentacoes() {
     category_id: "",
     is_recurring: false,
     recurring_type: "fixed", // "fixed" ou "variable" (estimated)
+    person_name: "",
   });
 
   const { data: meta } = useQuery({
@@ -91,6 +92,7 @@ function Movimentacoes() {
           is_fixed: form.recurring_type === "fixed",
           category_id: form.category_id || null,
           account_id: form.account_id || null,
+          person_name: form.person_name.trim() || null,
           day_of_month: new Date(form.competence_date).getDate() || 5,
         });
         if (recErr) throw recErr;
@@ -109,6 +111,7 @@ function Movimentacoes() {
         category_id: form.category_id || null,
         created_by: me?.id,
         recurring_id: recurring_id,
+        person_name: form.person_name.trim() || null,
         is_estimated: form.is_recurring && form.recurring_type === "variable",
       });
       if (error) throw error;
@@ -145,6 +148,7 @@ function Movimentacoes() {
   });
 
   const catName = (id: string | null) => (meta as any)?.categories.find((c: any) => c.id === id)?.name ?? "—";
+  const accName = (id: string | null) => (meta as any)?.accounts.find((a: any) => a.id === id)?.name ?? "—";
   const money = (v: number) => (hideBalances ? "•••" : brl(v));
 
   return (
@@ -205,6 +209,14 @@ function Movimentacoes() {
                       <Label>Data</Label>
                       <Input type="date" value={form.competence_date} onChange={(e) => setForm((f) => ({ ...f, competence_date: e.target.value }))} />
                     </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{isIncomeType(form.type) ? "Cliente / Origem" : "Fornecedor / Destino"}</Label>
+                    <Input 
+                      placeholder="Nome do cliente ou fornecedor" 
+                      value={form.person_name} 
+                      onChange={(e) => setForm((f) => ({ ...f, person_name: e.target.value }))} 
+                    />
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1">
@@ -288,7 +300,8 @@ function Movimentacoes() {
               <div className="min-w-0">
                 <p className="truncate font-medium text-foreground">{t.description}</p>
                 <p className="text-xs text-muted-foreground">
-                  {typeof t.competence_date === "string" ? t.competence_date.split("-").reverse().join("/") : new Date(t.competence_date).toLocaleDateString("pt-BR")} · {catName(t.category_id)}
+                  {typeof t.competence_date === "string" ? t.competence_date.split("-").reverse().join("/") : new Date(t.competence_date).toLocaleDateString("pt-BR")} · {catName(t.category_id)} · {accName(t.account_id)}
+                  {t.person_name && <span className="ml-2 font-medium text-foreground">({t.person_name})</span>}
                   {t.recurring_id && <span className="ml-2 text-[10px] uppercase tracking-wider text-primary font-bold">● Recorrente</span>}
                   {t.is_estimated && <span className="ml-2 text-[10px] uppercase tracking-wider text-amber-500 font-bold">● Estimado</span>}
                 </p>
