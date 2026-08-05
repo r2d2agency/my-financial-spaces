@@ -143,7 +143,7 @@ function CategoriasPage() {
                   {cat.name}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={cat.kind === 'income' ? 'success' : 'destructive'}>
+                  <Badge variant={cat.kind === 'income' ? 'default' : 'destructive'}>
                     {cat.kind === 'income' ? 'Receita' : 'Despesa'}
                   </Badge>
                 </TableCell>
