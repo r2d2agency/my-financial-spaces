@@ -83,9 +83,9 @@ function Movimentacoes() {
     queryFn: async () => {
       const { data, error } = await db
         .from("transactions")
-        .select("id, type, description, amount, status, competence_date, category_id, is_estimated, recurring_id")
+        .select("id, type, description, amount, status, competence_date, category_id, is_estimated, recurring_id, nature")
         .eq("workspace_id", wsId!)
-        .execute(); // Simplificando para o db-browser básico
+        .execute();
       if (error) throw error;
       return data ?? [];
     },
