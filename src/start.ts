@@ -26,6 +26,5 @@ const csrfMiddleware = createCsrfMiddleware({
 });
 
 export const startInstance = createStart(() => ({
-  functionMiddleware: [attachLocalAuth],
   requestMiddleware: [errorMiddleware, csrfMiddleware],
 }));
