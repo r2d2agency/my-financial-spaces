@@ -144,7 +144,7 @@ function Movimentacoes() {
       toast.success("Categoria criada.");
       setNewCatOpen(false);
       setNewCatName("");
-      qc.invalidateQueries(["meta", wsId]);
+      qc.invalidateQueries({ queryKey: ["meta", wsId] });
       setForm(f => ({ ...f, category_id: data.id }));
     },
     onError: (e: Error) => toast.error(e.message),
@@ -165,7 +165,7 @@ function Movimentacoes() {
       toast.success("Conta criada.");
       setNewAccOpen(false);
       setNewAccName("");
-      qc.invalidateQueries(["meta", wsId]);
+      qc.invalidateQueries({ queryKey: ["meta", wsId] });
       setForm(f => ({ ...f, account_id: data.id }));
     },
     onError: (e: Error) => toast.error(e.message),
