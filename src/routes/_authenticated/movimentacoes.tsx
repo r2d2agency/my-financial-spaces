@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Check, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Trash2, Plus } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-client.functions";
 import { useServerFn } from "@tanstack/react-start";
 
@@ -37,6 +37,10 @@ function Movimentacoes() {
   const [open, setOpen] = useState(false);
   const { start, end } = monthRange(ref);
   const getUser = useServerFn(getCurrentUser);
+  const [newCatOpen, setNewCatOpen] = useState(false);
+  const [newAccOpen, setNewAccOpen] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const [newAccName, setNewAccName] = useState("");
 
   const [form, setForm] = useState({
     type: "expense",
@@ -121,6 +125,48 @@ function Movimentacoes() {
       setOpen(false);
       setForm((f) => ({ ...f, description: "", amount: "" }));
       qc.invalidateQueries();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const createCategory = useMutation({
+    mutationFn: async () => {
+      if (!newCatName.trim()) throw new Error("Informe o nome da categoria");
+      const { data, error } = await db.from("categories").insert({
+        workspace_id: wsId!,
+        name: newCatName.trim(),
+        kind: form.type === "income" ? "income" : "expense"
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success("Categoria criada.");
+      setNewCatOpen(false);
+      setNewCatName("");
+      qc.invalidateQueries(["meta", wsId]);
+      setForm(f => ({ ...f, category_id: data.id }));
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const createAccount = useMutation({
+    mutationFn: async () => {
+      if (!newAccName.trim()) throw new Error("Informe o nome da conta");
+      const { data, error } = await db.from("financial_accounts").insert({
+        workspace_id: wsId!,
+        name: newAccName.trim(),
+        type: "checking"
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success("Conta criada.");
+      setNewAccOpen(false);
+      setNewAccName("");
+      qc.invalidateQueries(["meta", wsId]);
+      setForm(f => ({ ...f, account_id: data.id }));
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -220,7 +266,20 @@ function Movimentacoes() {
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1">
-                      <Label>Conta</Label>
+                      <div className="flex items-center justify-between">
+                        <Label>Conta</Label>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-5 w-5" 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setNewAccOpen(true);
+                          }}
+                        >
+                          <Plus className="size-3" />
+                        </Button>
+                      </div>
                       <Select value={form.account_id} onValueChange={(v) => setForm((f) => ({ ...f, account_id: v }))}>
                         <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
                         <SelectContent>
@@ -231,7 +290,20 @@ function Movimentacoes() {
                       </Select>
                     </div>
                     <div className="space-y-1">
-                      <Label>Categoria</Label>
+                      <div className="flex items-center justify-between">
+                        <Label>Categoria</Label>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-5 w-5" 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setNewCatOpen(true);
+                          }}
+                        >
+                          <Plus className="size-3" />
+                        </Button>
+                      </div>
                       <Select value={form.category_id} onValueChange={(v) => setForm((f) => ({ ...f, category_id: v }))}>
                         <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
                         <SelectContent>
@@ -288,6 +360,57 @@ function Movimentacoes() {
           )}
         </div>
       </div>
+
+      {/* Modais de cadastro rápido */}
+      <Dialog open={newCatOpen} onOpenChange={setNewCatOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nova categoria</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nome da categoria</Label>
+              <Input 
+                placeholder="Ex: Alimentação, Aluguel..." 
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && createCategory.mutate()}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewCatOpen(false)}>Cancelar</Button>
+            <Button onClick={() => createCategory.mutate()} disabled={createCategory.isPending}>
+              {createCategory.isPending ? "Criando..." : "Criar categoria"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={newAccOpen} onOpenChange={setNewAccOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nova conta</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nome da conta</Label>
+              <Input 
+                placeholder="Ex: Nubank, Itaú, Dinheiro..." 
+                value={newAccName}
+                onChange={(e) => setNewAccName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && createAccount.mutate()}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewAccOpen(false)}>Cancelar</Button>
+            <Button onClick={() => createAccount.mutate()} disabled={createAccount.isPending}>
+              {createAccount.isPending ? "Criando..." : "Criar conta"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader>
