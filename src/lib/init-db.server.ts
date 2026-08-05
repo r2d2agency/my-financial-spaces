@@ -448,6 +448,17 @@ export async function initializeDatabase() {
         
         -- Migração de senha (segurança)
         ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+        -- Sprint D: Estornos e Hierarquia de Centros de Custo
+        DO $$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tx_nature') THEN
+                CREATE TYPE public.tx_nature AS ENUM ('normal', 'refund', 'reversal', 'adjustment');
+            END IF;
+        END $$;
+
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS related_transaction_id UUID REFERENCES public.transactions(id);
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS nature public.tx_nature DEFAULT 'normal';
+        
+        ALTER TABLE public.cost_centers ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES public.cost_centers(id);
       `;
 
       await query(sql);
