@@ -69,6 +69,8 @@ function Planejamento() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const realized = (catId: string) =>
+    ((data as any)?.tx ?? []).filter((t: any) => t.category_id === catId && t.type === "expense").reduce((s: number, t: any) => s + num(t.amount), 0);
   const planned = (catId: string) => num(((data as any)?.budgets ?? []).find((b: any) => b.category_id === catId)?.amount);
 
   const totalPlan = ((data as any)?.cats ?? []).reduce((s: number, c: any) => s + planned(c.id), 0);
