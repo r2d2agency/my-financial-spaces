@@ -49,10 +49,10 @@ Legenda: ✅ pronto · 🟡 parcial · ❌ não existe
 | Cartões de crédito e faturas | 🟡 tabela + rota `/cartoes`, sem ciclo de fatura real |
 | Dívidas e parcelamentos | 🟡 cadastro e listagem; sem simulador/juros/avalanche |
 | Pagamentos parciais | ❌ |
-| Estorno / reembolso vinculado | ❌ |
+| Estorno / reembolso vinculado | ✅ | `nature` e `related_transaction_id` adicionados |
 | Conciliação bancária | ❌ |
 | Divisão de despesas entre membros | ❌ |
-| Centros de custo / tags / subcategorias | ❌ |
+| Centros de custo / tags / subcategorias | ✅ | hierarquia e parent_id implementados |
 | Assinaturas (visão dedicada) | ❌ |
 
 ## 4. Planejamento e inteligência
