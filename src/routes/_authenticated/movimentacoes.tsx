@@ -62,17 +62,17 @@ function Movimentacoes() {
     queryKey: ["meta", wsId],
     enabled: !!wsId,
     queryFn: async () => {
-      const [accounts, categories, costCenters, cards] = await Promise.all([
+      const [accountsRes, categoriesRes, costCentersRes, cardsRes] = await Promise.all([
         db.from("financial_accounts").select("id, name").eq("workspace_id", wsId!).execute(),
         db.from("categories").select("id, name, kind, subcategory_of").eq("workspace_id", wsId!).execute(),
         db.from("cost_centers").select("id, name, parent_id").eq("workspace_id", wsId!).execute(),
         db.from("credit_cards").select("id, name").eq("workspace_id", wsId!).eq("archived", false).execute(),
       ]);
       return { 
-        accounts: accounts.data ?? [], 
-        categories: categories.data ?? [],
-        costCenters: costCenters.data ?? [],
-        cards: cards.data ?? []
+        accounts: Array.isArray(accountsRes?.data) ? accountsRes.data : [], 
+        categories: Array.isArray(categoriesRes?.data) ? categoriesRes.data : [],
+        costCenters: Array.isArray(costCentersRes?.data) ? costCentersRes.data : [],
+        cards: Array.isArray(cardsRes?.data) ? cardsRes.data : []
       };
     },
   });
@@ -81,13 +81,12 @@ function Movimentacoes() {
     queryKey: ["tx", wsId, iso(start)],
     enabled: !!wsId,
     queryFn: async () => {
-      const { data, error } = await db
+      const res = await db
         .from("transactions")
         .select("id, type, description, amount, status, competence_date, category_id, is_estimated, recurring_id, nature")
         .eq("workspace_id", wsId!)
         .execute();
-      if (error) throw error;
-      return data ?? [];
+      return Array.isArray(res?.data) ? res.data : [];
     },
   });
 
