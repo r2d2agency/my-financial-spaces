@@ -53,10 +53,12 @@ function CategoriasPage() {
 
   const createCategory = useMutation({
     mutationFn: async (formData: any) => {
-      return await db.from("categories").insert({
+      const { data, error } = await db.from("categories").insert({
         ...formData,
         workspace_id: wsId,
-      }).execute();
+      });
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });

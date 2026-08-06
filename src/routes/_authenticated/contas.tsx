@@ -53,11 +53,13 @@ function ContasPage() {
 
   const createAccount = useMutation({
     mutationFn: async (formData: any) => {
-      return await db.from("financial_accounts").insert({
+      const { data, error } = await db.from("financial_accounts").insert({
         ...formData,
         workspace_id: wsId,
         initial_balance: parseFloat(formData.initial_balance || "0"),
-      }).execute();
+      });
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });

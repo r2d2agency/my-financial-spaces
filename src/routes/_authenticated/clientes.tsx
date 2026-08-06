@@ -53,10 +53,12 @@ function ClientesPage() {
 
   const createContact = useMutation({
     mutationFn: async (formData: any) => {
-      return await db.from("contacts").insert({
+      const { data, error } = await db.from("contacts").insert({
         ...formData,
         workspace_id: wsId,
-      }).execute();
+      });
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
@@ -78,7 +80,14 @@ function ClientesPage() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    createContact.mutate(Object.fromEntries(formData));
+    const data = Object.fromEntries(formData);
+    
+    // Limpeza de campos vazios para evitar erros de tipo no Postgres
+    const payload = Object.fromEntries(
+      Object.entries(data).filter(([_, v]) => v !== "" && v !== undefined)
+    );
+    
+    createContact.mutate(payload);
   };
 
   return (
