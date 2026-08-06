@@ -471,6 +471,19 @@ export async function initializeDatabase() {
         ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS nature public.tx_nature DEFAULT 'normal';
         
         ALTER TABLE public.cost_centers ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES public.cost_centers(id);
+        
+        -- Garantir que a tabela contacts existe
+        CREATE TABLE IF NOT EXISTS public.contacts (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          document TEXT,
+          email TEXT,
+          phone TEXT,
+          kind TEXT DEFAULT 'both',
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
       `;
 
       await query(sql);
