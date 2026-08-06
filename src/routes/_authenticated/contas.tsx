@@ -45,8 +45,8 @@ function ContasPage() {
     queryKey: ["accounts", wsId],
     queryFn: async () => {
       if (!wsId) return [];
-      const { data } = await db.from("financial_accounts").select("*").eq("workspace_id", wsId).execute();
-      return data || [];
+      const res = await db.from("financial_accounts").select("*").eq("workspace_id", wsId).execute();
+      return Array.isArray(res?.data) ? res.data : [];
     },
     enabled: !!wsId,
   });

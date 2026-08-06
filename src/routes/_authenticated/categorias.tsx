@@ -45,8 +45,8 @@ function CategoriasPage() {
     queryKey: ["categories", wsId],
     queryFn: async () => {
       if (!wsId) return [];
-      const { data } = await db.from("categories").select("*").eq("workspace_id", wsId).order("name").execute();
-      return data || [];
+      const res = await db.from("categories").select("*").eq("workspace_id", wsId).order("name").execute();
+      return Array.isArray(res?.data) ? res.data : [];
     },
     enabled: !!wsId,
   });

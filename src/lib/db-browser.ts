@@ -101,6 +101,14 @@ export const db = {
       insert: async (data: any) => {
         const row = await dbQuery({ data: { table, action: "insert", data } });
         return { data: row, error: null };
+      },
+      
+      upsert: async (data: any) => {
+        // Implementação simples de upsert simulado ou via RPC se necessário.
+        // Por enquanto, o backend trata insert com ON CONFLICT se o SQL for ajustado, 
+        // mas aqui mantemos compatibilidade.
+        const row = await dbQuery({ data: { table, action: "insert", data } });
+        return { data: row, error: null };
       }
     };
 

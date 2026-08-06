@@ -2,10 +2,6 @@ import { createStart, createCsrfMiddleware, createMiddleware } from "@tanstack/r
 import { renderErrorPage } from "./lib/error-page";
 import { attachLocalAuth } from "@/lib/auth-attacher";
 
-
-
-
-
 const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
     return await next();

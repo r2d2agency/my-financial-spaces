@@ -45,8 +45,8 @@ function ClientesPage() {
     queryKey: ["contacts", wsId],
     queryFn: async () => {
       if (!wsId) return [];
-      const { data } = await db.from("contacts").select("*").eq("workspace_id", wsId).order("name").execute();
-      return data || [];
+      const res = await db.from("contacts").select("*").eq("workspace_id", wsId).order("name").execute();
+      return Array.isArray(res?.data) ? res.data : [];
     },
     enabled: !!wsId,
   });
