@@ -27,7 +27,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Plus, Users, Trash2, UserPlus } from "lucide-react";
+import { Plus, Users, Trash2, Pencil } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,7 @@ function ClientesPage() {
   const { wsId } = useWorkspace();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<any>(null);
 
   const { data: contacts, isLoading } = useQuery({
     queryKey: ["contacts", wsId],
@@ -51,19 +52,26 @@ function ClientesPage() {
     enabled: !!wsId,
   });
 
-  const createContact = useMutation({
+  const saveContact = useMutation({
     mutationFn: async (formData: any) => {
-      const { data, error } = await db.from("contacts").insert({
-        ...formData,
-        workspace_id: wsId,
-      });
-      if (error) throw error;
-      return data;
+      if (editingContact) {
+        const { error } = await db.from("contacts").update(formData).eq("id", editingContact.id).execute();
+        if (error) throw error;
+        return editingContact;
+      } else {
+        const { data, error } = await db.from("contacts").insert({
+          ...formData,
+          workspace_id: wsId,
+        });
+        if (error) throw error;
+        return data;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       setIsOpen(false);
-      toast.success("Contato cadastrado!");
+      setEditingContact(null);
+      toast.success(editingContact ? "Contato atualizado!" : "Contato cadastrado!");
     },
   });
 
@@ -87,7 +95,7 @@ function ClientesPage() {
       Object.entries(data).filter(([_, v]) => v !== "" && v !== undefined)
     );
     
-    createContact.mutate(payload);
+    saveContact.mutate(payload);
   };
 
   return (
@@ -97,25 +105,28 @@ function ClientesPage() {
           <h1 className="text-2xl font-bold tracking-tight">Clientes e Fornecedores</h1>
           <p className="text-muted-foreground">Gerencie pessoas e empresas vinculadas às suas finanças.</p>
         </div>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <Dialog open={isOpen} onOpenChange={(open) => {
+          setIsOpen(open);
+          if (!open) setEditingContact(null);
+        }}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => setEditingContact(null)}>
               <Plus className="size-4" /> Novo Contato
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Novo Cadastro</DialogTitle>
+              <DialogTitle>{editingContact ? "Editar Cadastro" : "Novo Cadastro"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 pt-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Nome / Razão Social</Label>
-                <Input id="name" name="name" placeholder="Nome completo ou empresa" required />
+                <Input id="name" name="name" placeholder="Nome completo ou empresa" defaultValue={editingContact?.name} required />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="kind">Tipo</Label>
-                  <Select name="kind" defaultValue="both">
+                  <Select name="kind" defaultValue={editingContact?.kind || "both"}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -128,21 +139,21 @@ function ClientesPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="document">CPF/CNPJ (Opcional)</Label>
-                  <Input id="document" name="document" placeholder="000.000.000-00" />
+                  <Input id="document" name="document" placeholder="000.000.000-00" defaultValue={editingContact?.document} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" name="email" type="email" placeholder="contato@empresa.com" />
+                  <Input id="email" name="email" type="email" placeholder="contato@empresa.com" defaultValue={editingContact?.email} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Telefone</Label>
-                  <Input id="phone" name="phone" placeholder="(00) 00000-0000" />
+                  <Input id="phone" name="phone" placeholder="(00) 00000-0000" defaultValue={editingContact?.phone} />
                 </div>
               </div>
-              <Button type="submit" className="w-full" disabled={createContact.isPending}>
-                {createContact.isPending ? "Salvando..." : "Salvar Cadastro"}
+              <Button type="submit" className="w-full" disabled={saveContact.isPending}>
+                {saveContact.isPending ? "Salvando..." : editingContact ? "Atualizar Cadastro" : "Salvar Cadastro"}
               </Button>
             </form>
           </DialogContent>
@@ -175,7 +186,18 @@ function ClientesPage() {
                   <div className="text-xs">{contact.email}</div>
                   <div className="text-xs text-muted-foreground">{contact.phone}</div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="flex items-center gap-1">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="hover:bg-primary/10 text-primary"
+                    onClick={() => {
+                      setEditingContact(contact);
+                      setIsOpen(true);
+                    }}
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
                   <Button 
                     variant="ghost" 
                     size="icon" 
