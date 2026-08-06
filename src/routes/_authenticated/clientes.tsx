@@ -81,10 +81,12 @@ function ClientesPage() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData);
-    // Remover campos vazios para não dar erro no Postgres se a coluna for UUID ou algo específico
+    
+    // Limpeza de campos vazios para evitar erros de tipo no Postgres
     const payload = Object.fromEntries(
       Object.entries(data).filter(([_, v]) => v !== "" && v !== undefined)
     );
+    
     createContact.mutate(payload);
   };
 
