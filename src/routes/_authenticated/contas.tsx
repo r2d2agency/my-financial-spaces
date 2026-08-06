@@ -28,7 +28,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Plus, Wallet, Trash2, Building2 } from "lucide-react";
+import { Plus, Wallet, Trash2, Building2, Pencil } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -40,6 +40,7 @@ function ContasPage() {
   const { wsId } = useWorkspace();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<any>(null);
 
   const { data: accounts, isLoading } = useQuery({
     queryKey: ["accounts", wsId],
@@ -51,20 +52,31 @@ function ContasPage() {
     enabled: !!wsId,
   });
 
-  const createAccount = useMutation({
+  const saveAccount = useMutation({
     mutationFn: async (formData: any) => {
-      const { data, error } = await db.from("financial_accounts").insert({
+      const payload = {
         ...formData,
-        workspace_id: wsId,
         initial_balance: parseFloat(formData.initial_balance || "0"),
-      });
-      if (error) throw error;
-      return data;
+      };
+
+      if (editingAccount) {
+        const { error } = await db.from("financial_accounts").update(payload).eq("id", editingAccount.id).execute();
+        if (error) throw error;
+        return editingAccount;
+      } else {
+        const { data, error } = await db.from("financial_accounts").insert({
+          ...payload,
+          workspace_id: wsId,
+        });
+        if (error) throw error;
+        return data;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       setIsOpen(false);
-      toast.success("Conta criada com sucesso!");
+      setEditingAccount(null);
+      toast.success(editingAccount ? "Conta atualizada!" : "Conta criada com sucesso!");
     },
   });
 
@@ -81,7 +93,7 @@ function ContasPage() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    createAccount.mutate(Object.fromEntries(formData));
+    saveAccount.mutate(Object.fromEntries(formData));
   };
 
   return (
@@ -91,25 +103,28 @@ function ContasPage() {
           <h1 className="text-2xl font-bold tracking-tight">Contas Bancárias</h1>
           <p className="text-muted-foreground">Gerencie suas contas, carteiras e investimentos.</p>
         </div>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <Dialog open={isOpen} onOpenChange={(open) => {
+          setIsOpen(open);
+          if (!open) setEditingAccount(null);
+        }}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => setEditingAccount(null)}>
               <Plus className="size-4" /> Nova Conta
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Cadastrar Nova Conta</DialogTitle>
+              <DialogTitle>{editingAccount ? "Editar Conta" : "Cadastrar Nova Conta"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 pt-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Nome da Conta</Label>
-                <Input id="name" name="name" placeholder="Ex: Nubank, Carteira, Itaú" required />
+                <Input id="name" name="name" placeholder="Ex: Nubank, Carteira, Itaú" defaultValue={editingAccount?.name} required />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="kind">Tipo</Label>
-                  <Select name="kind" defaultValue="checking">
+                  <Select name="kind" defaultValue={editingAccount?.kind || "checking"}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -123,15 +138,15 @@ function ContasPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="initial_balance">Saldo Inicial</Label>
-                  <Input id="initial_balance" name="initial_balance" type="number" step="0.01" defaultValue="0" />
+                  <Input id="initial_balance" name="initial_balance" type="number" step="0.01" defaultValue={editingAccount?.initial_balance || "0"} />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="institution">Instituição (Opcional)</Label>
-                <Input id="institution" name="institution" placeholder="Ex: Banco do Brasil" />
+                <Input id="institution" name="institution" placeholder="Ex: Banco do Brasil" defaultValue={editingAccount?.institution} />
               </div>
-              <Button type="submit" className="w-full" disabled={createAccount.isPending}>
-                {createAccount.isPending ? "Salvando..." : "Salvar Conta"}
+              <Button type="submit" className="w-full" disabled={saveAccount.isPending}>
+                {saveAccount.isPending ? "Salvando..." : editingAccount ? "Atualizar Conta" : "Salvar Conta"}
               </Button>
             </form>
           </DialogContent>
@@ -152,14 +167,27 @@ function ContasPage() {
               <p className="text-xs text-muted-foreground mt-1">
                 {acc.institution || (acc.kind === 'wallet' ? 'Dinheiro' : 'Outros')}
               </p>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:bg-destructive/10"
-                onClick={() => deleteAccount.mutate(acc.id)}
-              >
-                <Trash2 className="size-4" />
-              </Button>
+              <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="hover:bg-primary/10 text-primary"
+                  onClick={() => {
+                    setEditingAccount(acc);
+                    setIsOpen(true);
+                  }}
+                >
+                  <Pencil className="size-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-destructive hover:bg-destructive/10"
+                  onClick={() => deleteAccount.mutate(acc.id)}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
