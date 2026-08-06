@@ -126,7 +126,7 @@ function Movimentacoes() {
           repeat_until: form.repeat_until || null,
         });
         if (recErr) throw recErr;
-        recurring_id = rec.id;
+        recurring_id = (rec as any).id;
       }
 
       // Se for parcelado, gera múltiplas transações
