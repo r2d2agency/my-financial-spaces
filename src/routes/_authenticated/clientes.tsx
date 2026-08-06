@@ -78,7 +78,12 @@ function ClientesPage() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    createContact.mutate(Object.fromEntries(formData));
+    const data = Object.fromEntries(formData);
+    // Remover campos vazios para não dar erro no Postgres se a coluna for UUID ou algo específico
+    const payload = Object.fromEntries(
+      Object.entries(data).filter(([_, v]) => v !== "" && v !== undefined)
+    );
+    createContact.mutate(payload);
   };
 
   return (
