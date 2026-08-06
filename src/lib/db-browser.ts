@@ -99,8 +99,8 @@ export const db = {
       },
 
       insert: async (data: any) => {
-        const row = await dbQuery({ data: { table, action: "insert", data } });
-        return { data: row, error: null };
+        const res = await dbQuery({ data: { table, action: "insert", data } });
+        return { data: res, error: null };
       },
       
       upsert: async (data: any) => {

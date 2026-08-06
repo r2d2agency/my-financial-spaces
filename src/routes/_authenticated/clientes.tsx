@@ -53,10 +53,12 @@ function ClientesPage() {
 
   const createContact = useMutation({
     mutationFn: async (formData: any) => {
-      return await db.from("contacts").insert({
+      const { data, error } = await db.from("contacts").insert({
         ...formData,
         workspace_id: wsId,
-      }).execute();
+      });
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
