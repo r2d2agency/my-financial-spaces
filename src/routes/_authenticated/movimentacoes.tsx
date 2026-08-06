@@ -56,6 +56,8 @@ function Movimentacoes() {
     recurring_type: "fixed",
     person_name: "",
     cost_center_id: "", // Sprint A
+    installments: "1",
+    repeat_until: "",
   });
 
   const { data: meta } = useQuery({
@@ -121,29 +123,62 @@ function Movimentacoes() {
           person_name: form.person_name.trim() || null,
           day_of_month: new Date(form.competence_date).getDate() || 5,
           cost_center_id: form.cost_center_id || null,
+          repeat_until: form.repeat_until || null,
         });
         if (recErr) throw recErr;
-        recurring_id = rec.id;
+        recurring_id = (rec as any).id;
       }
 
-      const { error } = await db.from("transactions").insert({
-        workspace_id: wsId!,
-        type: form.type as any,
-        description: form.description.trim(),
-        amount: amount,
-        status: form.status as any,
-        competence_date: form.competence_date,
-        paid_date: form.status === "paid" ? form.competence_date : null,
-        account_id: form.account_id || null,
-        category_id: form.category_id || null,
-        card_id: form.card_id || null, // Sprint C
-        created_by: me?.id,
-        recurring_id: recurring_id,
-        person_name: form.person_name.trim() || null,
-        is_estimated: form.is_recurring && form.recurring_type === "variable",
-        cost_center_id: form.cost_center_id || null,
-      });
-      if (error) throw error;
+      // Se for parcelado, gera múltiplas transações
+      const installmentsCount = parseInt(form.installments) || 1;
+      
+      if (installmentsCount > 1) {
+        const installmentAmount = amount / installmentsCount;
+        const baseDate = new Date(form.competence_date);
+        
+        for (let i = 0; i < installmentsCount; i++) {
+          const currentDate = new Date(baseDate);
+          currentDate.setMonth(baseDate.getMonth() + i);
+          
+          const { error } = await db.from("transactions").insert({
+            workspace_id: wsId!,
+            type: form.type as any,
+            description: `${form.description.trim()} (${i + 1}/${installmentsCount})`,
+            amount: installmentAmount,
+            status: i === 0 ? (form.status as any) : "pending",
+            competence_date: iso(currentDate),
+            paid_date: (i === 0 && form.status === "paid") ? iso(currentDate) : null,
+            account_id: form.account_id || null,
+            category_id: form.category_id || null,
+            card_id: form.card_id || null,
+            created_by: me?.id,
+            recurring_id: recurring_id,
+            person_name: form.person_name.trim() || null,
+            is_estimated: form.is_recurring && form.recurring_type === "variable",
+            cost_center_id: form.cost_center_id || null,
+          });
+          if (error) throw error;
+        }
+      } else {
+        const { error } = await db.from("transactions").insert({
+          workspace_id: wsId!,
+          type: form.type as any,
+          description: form.description.trim(),
+          amount: amount,
+          status: form.status as any,
+          competence_date: form.competence_date,
+          paid_date: form.status === "paid" ? form.competence_date : null,
+          account_id: form.account_id || null,
+          category_id: form.category_id || null,
+          card_id: form.card_id || null,
+          created_by: me?.id,
+          recurring_id: recurring_id,
+          person_name: form.person_name.trim() || null,
+          is_estimated: form.is_recurring && form.recurring_type === "variable",
+          cost_center_id: form.cost_center_id || null,
+        });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       toast.success("Lançamento criado.");
@@ -433,38 +468,65 @@ function Movimentacoes() {
                     </div>
                   )}
                   
-                  <div className="flex items-center gap-4 py-2">
-                    <div className="flex items-center gap-2">
-                      <input 
-                        type="checkbox" 
-                        id="is_recurring"
-                        checked={form.is_recurring} 
-                        onChange={(e) => setForm(f => ({ ...f, is_recurring: e.target.checked }))}
-                        className="size-4 rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                      <Label htmlFor="is_recurring" className="cursor-pointer">Recorrente (fixo ou variável)</Label>
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="checkbox" 
+                          id="is_recurring"
+                          checked={form.is_recurring} 
+                          onChange={(e) => setForm(f => ({ ...f, is_recurring: e.target.checked, installments: "1" }))}
+                          className="size-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <Label htmlFor="is_recurring" className="cursor-pointer">Recorrente</Label>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="checkbox" 
+                          id="is_parcelled"
+                          checked={parseInt(form.installments) > 1} 
+                          onChange={(e) => setForm(f => ({ ...f, installments: e.target.checked ? "2" : "1", is_recurring: false }))}
+                          className="size-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <Label htmlFor="is_parcelled" className="cursor-pointer">Parcelado</Label>
+                      </div>
                     </div>
 
                     {form.is_recurring && (
-                      <div className="flex items-center gap-3">
-                        <label className="flex items-center gap-1 text-sm cursor-pointer">
-                          <input 
-                            type="radio" 
-                            name="rec_type" 
-                            checked={form.recurring_type === "fixed"} 
-                            onChange={() => setForm(f => ({ ...f, recurring_type: "fixed" }))}
+                      <div className="grid gap-3 sm:grid-cols-2 p-3 bg-muted/50 rounded-lg">
+                        <div className="space-y-1">
+                          <Label>Tipo de recorrência</Label>
+                          <Select value={form.recurring_type} onValueChange={(v) => setForm(f => ({ ...f, recurring_type: v }))}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="fixed">Fixo (Aluguel, Internet...)</SelectItem>
+                              <SelectItem value="variable">Variável (Luz, Água...)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Até quando? (Opcional)</Label>
+                          <Input type="date" value={form.repeat_until} onChange={(e) => setForm(f => ({ ...f, repeat_until: e.target.value }))} />
+                        </div>
+                      </div>
+                    )}
+
+                    {parseInt(form.installments) > 1 && (
+                      <div className="grid gap-3 sm:grid-cols-2 p-3 bg-muted/50 rounded-lg">
+                        <div className="space-y-1">
+                          <Label>Quantidade de parcelas</Label>
+                          <Input 
+                            type="number" 
+                            min="2" 
+                            max="360" 
+                            value={form.installments} 
+                            onChange={(e) => setForm(f => ({ ...f, installments: e.target.value }))} 
                           />
-                          Fixo
-                        </label>
-                        <label className="flex items-center gap-1 text-sm cursor-pointer">
-                          <input 
-                            type="radio" 
-                            name="rec_type" 
-                            checked={form.recurring_type === "variable"} 
-                            onChange={() => setForm(f => ({ ...f, recurring_type: "variable" }))}
-                          />
-                          Variável (Estimativa)
-                        </label>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">O valor total será dividido entre as parcelas.</Label>
+                        </div>
                       </div>
                     )}
                   </div>
