@@ -1,7 +1,7 @@
 import { createStart, createCsrfMiddleware, createMiddleware } from "@tanstack/react-start";
 import { renderErrorPage } from "./lib/error-page";
 import { attachLocalAuth } from "@/lib/auth-attacher";
-import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
+
 
 
 
@@ -28,5 +28,5 @@ const csrfMiddleware = createCsrfMiddleware({
 
 export const startInstance = createStart(() => ({
   requestMiddleware: [errorMiddleware, csrfMiddleware],
-  functionMiddleware: [attachSupabaseAuth,  attachLocalAuth],
+  functionMiddleware: [attachLocalAuth],
 }));
