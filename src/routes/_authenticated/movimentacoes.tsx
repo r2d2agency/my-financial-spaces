@@ -35,6 +35,8 @@ function Movimentacoes() {
   const qc = useQueryClient();
   const [ref, setRef] = useState(() => new Date());
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [recDialog, setRecDialog] = useState<{ open: boolean, txId: string, data: any } | null>(null);
   const { start, end } = monthRange(ref);
   const getUser = useServerFn(getCurrentUser);
   const [newCatOpen, setNewCatOpen] = useState(false);
@@ -263,12 +265,70 @@ function Movimentacoes() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const remove = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await db.from("transactions").delete().eq("id", id).execute();
-      if (error) throw error;
+  const updateTx = useMutation({
+    mutationFn: async ({ id, data, scope }: { id: string, data: any, scope: 'single' | 'all' }) => {
+      if (scope === 'all' && data.recurring_id) {
+        // Atualiza a regra de recorrência
+        await db.from("recurring_transactions").update({
+          description: data.description,
+          amount: num(data.amount),
+          category_id: data.category_id || null,
+          account_id: data.account_id || null,
+          person_name: data.person_name || null,
+          cost_center_id: data.cost_center_id || null,
+        }).eq("id", data.recurring_id).execute();
+
+        // Atualiza todas as transações pendentes futuras daquela recorrência
+        await db.from("transactions").update({
+          description: data.description,
+          amount: num(data.amount),
+          category_id: data.category_id || null,
+          account_id: data.account_id || null,
+          person_name: data.person_name || null,
+          cost_center_id: data.cost_center_id || null,
+        }).eq("recurring_id", data.recurring_id).eq("status", "pending").execute();
+      } else {
+        const { error } = await db.from("transactions").update({
+          description: data.description,
+          amount: num(data.amount),
+          status: data.status,
+          competence_date: data.competence_date,
+          account_id: data.account_id || null,
+          category_id: data.category_id || null,
+          card_id: data.card_id || null,
+          person_name: data.person_name || null,
+          cost_center_id: data.cost_center_id || null,
+        }).eq("id", id).execute();
+        if (error) throw error;
+      }
     },
-    onSuccess: () => qc.invalidateQueries(),
+    onSuccess: () => {
+      toast.success("Lançamento atualizado.");
+      setEditOpen(false);
+      setRecDialog(null);
+      qc.invalidateQueries();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: async ({ id, recurring_id, scope }: { id: string, recurring_id?: string, scope: 'single' | 'all' }) => {
+      if (scope === 'all' && recurring_id) {
+        // Deleta a recorrência
+        await db.from("recurring_transactions").delete().eq("id", recurring_id).execute();
+        // Deleta todas as transações futuras dessa recorrência
+        const { error } = await db.from("transactions").delete().eq("recurring_id", recurring_id).eq("status", "pending").execute();
+        if (error) throw error;
+      } else {
+        const { error } = await db.from("transactions").delete().eq("id", id).execute();
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Excluído com sucesso.");
+      setRecDialog(null);
+      qc.invalidateQueries();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -614,8 +674,26 @@ function Movimentacoes() {
         <CardContent className="divide-y divide-border">
           {(rows ?? []).length === 0 && <p className="py-4 text-sm text-muted-foreground">Nada por aqui neste mês.</p>}
           {(rows ?? []).map((t: any) => (
-            <div key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
-              <div className="min-w-0">
+            <div key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-3 hover:bg-muted/30 px-2 rounded-lg transition-colors group">
+              <div className="min-w-0 flex-1 cursor-pointer" onClick={() => {
+                setForm({
+                  ...form,
+                  type: t.type,
+                  description: t.description,
+                  amount: String(Math.abs(t.amount)),
+                  competence_date: iso(new Date(t.competence_date)),
+                  status: t.status,
+                  account_id: t.account_id || "",
+                  category_id: t.category_id || "",
+                  person_name: t.person_name || "",
+                  cost_center_id: t.cost_center_id || "",
+                  is_recurring: !!t.recurring_id,
+                });
+                // Hack para guardar o ID sendo editado
+                (form as any).id = t.id;
+                (form as any).recurring_id = t.recurring_id;
+                setEditOpen(true);
+              }}>
                 <p className="truncate font-medium text-foreground">{t.description}</p>
                 <p className="text-xs text-muted-foreground">
                   {typeof t.competence_date === "string" ? t.competence_date.split("-").reverse().join("/") : new Date(t.competence_date).toLocaleDateString("pt-BR")} · {catName(t.category_id)} · {accName(t.account_id)}
@@ -639,7 +717,18 @@ function Movimentacoes() {
                   </Button>
                 )}
                 {canEdit && (
-                  <Button size="icon" variant="ghost" onClick={() => remove.mutate(t.id)}>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={() => {
+                      if (t.recurring_id) {
+                        setRecDialog({ open: true, txId: t.id, data: { ...t, action: 'delete' } });
+                      } else {
+                        remove.mutate({ id: t.id, scope: 'single' });
+                      }
+                    }}
+                  >
                     <Trash2 className="size-4" />
                   </Button>
                 )}
@@ -648,6 +737,126 @@ function Movimentacoes() {
           ))}
         </CardContent>
       </Card>
+
+      {/* Modal de Edição */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar lançamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+             <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label>Tipo</Label>
+                  <Select value={form.type} onValueChange={(v) => setForm((f) => ({ ...f, type: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {TX_TYPES.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Status</Label>
+                  <Select value={form.status} onValueChange={(v) => setForm((f) => ({ ...f, status: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pendente</SelectItem>
+                      <SelectItem value="paid">Pago</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label>Descrição</Label>
+                <Input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label>Valor</Label>
+                  <Input type="number" step="0.01" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} />
+                </div>
+                <div className="space-y-1">
+                  <Label>Data</Label>
+                  <Input type="date" value={form.competence_date} onChange={(e) => setForm((f) => ({ ...f, competence_date: e.target.value }))} />
+                </div>
+              </div>
+              
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label>Conta</Label>
+                  <Select value={form.account_id} onValueChange={(v) => setForm((f) => ({ ...f, account_id: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {(meta as any)?.accounts.map((a: any) => (
+                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Categoria</Label>
+                  <Select value={form.category_id} onValueChange={(v) => setForm((f) => ({ ...f, category_id: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {(meta as any)?.categories.map((c: any) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <Button 
+                className="w-full" 
+                onClick={() => {
+                  const txId = (form as any).id;
+                  const recurringId = (form as any).recurring_id;
+                  if (recurringId) {
+                    setRecDialog({ open: true, txId, data: { ...form, action: 'update', recurring_id: recurringId } });
+                  } else {
+                    updateTx.mutate({ id: txId, data: form, scope: 'single' });
+                  }
+                }}
+              >
+                {updateTx.isPending ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Recorrência */}
+      <Dialog open={!!recDialog?.open} onOpenChange={(o) => !o && setRecDialog(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Lançamento Recorrente</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-sm text-muted-foreground">
+            Este lançamento faz parte de uma recorrência. Deseja aplicar esta ação apenas a este lançamento ou a todos os futuros?
+          </div>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => {
+              if (recDialog?.data.action === 'delete') {
+                remove.mutate({ id: recDialog.txId, scope: 'single' });
+              } else {
+                updateTx.mutate({ id: recDialog!.txId, data: recDialog!.data, scope: 'single' });
+              }
+            }}>
+              Apenas este
+            </Button>
+            <Button className="w-full sm:w-auto" onClick={() => {
+              if (recDialog?.data.action === 'delete') {
+                remove.mutate({ id: recDialog.txId, recurring_id: recDialog.data.recurring_id, scope: 'all' });
+              } else {
+                updateTx.mutate({ id: recDialog!.txId, data: recDialog!.data, scope: 'all' });
+              }
+            }}>
+              Todos os futuros
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
