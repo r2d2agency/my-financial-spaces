@@ -5,6 +5,7 @@ import { attachLocalAuth } from "@/lib/auth-attacher";
 
 
 
+
 const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
     return await next();
@@ -26,5 +27,5 @@ const csrfMiddleware = createCsrfMiddleware({
 
 export const startInstance = createStart(() => ({
   requestMiddleware: [errorMiddleware, csrfMiddleware],
-  functionMiddleware: [attachLocalAuth],
+  functionMiddleware: [ attachLocalAuth],
 }));
