@@ -401,7 +401,10 @@ export async function initializeDatabase() {
           workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
           category_id UUID NOT NULL REFERENCES public.categories(id) ON DELETE CASCADE,
           amount NUMERIC(14,2) NOT NULL,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+          period_month INTEGER NOT NULL, -- 1-12
+          period_year INTEGER NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          UNIQUE (workspace_id, category_id, period_month, period_year)
         );
 
         -- Promover tnicodemos@gmail.com a platform_admin
@@ -416,11 +419,6 @@ export async function initializeDatabase() {
             ON CONFLICT (user_id, role) DO NOTHING;
           END IF;
         END $$;
-          period_month INTEGER NOT NULL, -- 1-12
-          period_year INTEGER NOT NULL,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-          UNIQUE (workspace_id, category_id, period_month, period_year)
-        );
 
         -- Sprint B: Metas Financeiras (Aprimoramento)
         ALTER TABLE public.financial_goals ADD COLUMN IF NOT EXISTS target_date DATE;
