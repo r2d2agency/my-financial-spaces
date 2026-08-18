@@ -159,3 +159,54 @@ export const updateMemberRole = createServerFn({ method: "POST" })
     await query("UPDATE public.workspace_members SET role = $1 WHERE workspace_id = $2 AND user_id = $3", [data.role, data.workspaceId, data.userId]);
     return { success: true };
   });
+
+export const createMemberWithAccount = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z.object({
+      workspaceId: z.string().uuid(),
+      email: z.string().email(),
+      name: z.string().min(2),
+      password: z.string().min(6),
+      role: z.enum(['admin', 'manager', 'operator', 'viewer']),
+    }).parse(data)
+  )
+  .handler(async ({ data }) => {
+    const adminId = await verifyAuth(data.workspaceId);
+    const email = data.email.toLowerCase().trim();
+    const { hashPassword } = await import("./crypto.server");
+
+    // 1. Verificar se usuário já existe na plataforma
+    const userRes = await query("SELECT id FROM auth.users WHERE lower(trim(email)) = $1", [email]);
+    let userId: string;
+
+    if (userRes.rows.length > 0) {
+      userId = userRes.rows[0].id;
+      // Se existe, apenas garante o membership no workspace (se já não for)
+      const existing = await checkExistingMembership(data.workspaceId, userId);
+      if (existing) {
+        throw new Error("Este usuário já possui acesso a este espaço.");
+      }
+    } else {
+      // 2. Criar conta se não existir
+      const pwHash = await hashPassword(data.password);
+      const newUser = await query(
+        `INSERT INTO auth.users (email, password_hash, raw_user_meta_data, must_change_password)
+         VALUES ($1, $2, $3, true) RETURNING id`,
+        [email, pwHash, JSON.stringify({ full_name: data.name })]
+      );
+      userId = newUser.rows[0].id;
+
+      // 3. Criar Perfil
+      await query(
+        `INSERT INTO public.profiles (id, full_name, email)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, full_name = EXCLUDED.full_name`,
+        [userId, data.name, email]
+      );
+    }
+
+    // 4. Adicionar ao Workspace
+    await createMembership(data.workspaceId, userId, data.role);
+
+    return { success: true, userId };
+  });
