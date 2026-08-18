@@ -11,6 +11,14 @@ export async function adminClient() {
           maybeSingle: async () => {
              const res = await query(`SELECT * FROM ${table} WHERE ${col} = $1 LIMIT 1`, [val]);
              return { data: res.rows[0] || null, error: null };
+          },
+          select: async (cols: string) => {
+             const res = await query(`SELECT ${cols} FROM ${table} WHERE ${col} = $1`, [val]);
+             return { data: res.rows, error: null };
+          },
+          execute: async () => {
+             const res = await query(`SELECT * FROM ${table} WHERE ${col} = $1`, [val]);
+             return { data: res.rows, error: null };
           }
         }),
         in: (col: string, vals: any[]) => ({
@@ -18,7 +26,12 @@ export async function adminClient() {
               const res = await query(`SELECT * FROM ${table} WHERE ${col} = ANY($1)`, [vals]);
               return { data: res.rows, error: null };
            }
-        })
+        }),
+        execute: async () => {
+           const res = await query(`SELECT * FROM ${table}`);
+           return { data: res.rows, error: null };
+        }
+
       }),
       insert: async (data: any) => {
         const keys = Object.keys(data);
