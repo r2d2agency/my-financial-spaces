@@ -71,15 +71,17 @@ function Dashboard() {
       {(summary.alerts.overdue_count > 0 || summary.alerts.soon_count > 0) && (
         <div className="grid gap-4">
           {summary.alerts.overdue_count > 0 && (
-            <Alert variant="destructive" className="cursor-pointer hover:bg-destructive/5" asChild>
-              <Link to="/movimentacoes" search={{ status: 'pending', overdue: true }}>
-                <AlertCircle className="size-4" />
-                <AlertTitle>Itens atrasados</AlertTitle>
-                <AlertDescription className="text-sm">
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg p-4 flex gap-3 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-destructive/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <AlertCircle className="size-5 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-bold">Itens atrasados</p>
+                <p className="text-xs mt-1">
                   {summary.alerts.overdue_count} lançamentos estão vencidos, totalizando {brl(summary.alerts.overdue_amount)}.
-                </AlertDescription>
-              </Link>
-            </Alert>
+                </p>
+              </div>
+              <Link to="/movimentacoes" className="absolute inset-0 z-10" />
+            </div>
           )}
           {summary.alerts.soon_count > 0 && (
             <Alert className="border-amber-500/50 bg-amber-500/5 text-amber-600 dark:text-amber-400">
