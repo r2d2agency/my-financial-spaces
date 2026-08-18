@@ -21,7 +21,7 @@ function InvitePage() {
 
   const { data: invite, isLoading, error } = useQuery({
     queryKey: ["invite", token],
-    queryFn: () => fetchDetails({ token }),
+    queryFn: () => fetchDetails({ data: { token } }),
     retry: false,
   });
 
@@ -31,7 +31,7 @@ function InvitePage() {
   });
 
   const accept = useMutation({
-    mutationFn: () => processAccept({ token }),
+    mutationFn: () => processAccept({ data: { token } }),
     onSuccess: (res) => {
       toast.success("Convite aceito com sucesso!");
       localStorage.setItem("ef.workspace", res.workspaceId);
