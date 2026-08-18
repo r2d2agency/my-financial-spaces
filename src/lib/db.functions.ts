@@ -211,32 +211,47 @@ export const dbQuery = createServerFn({ method: "POST" })
           // Validar acesso ao workspace
           await verifyAuth(workspace_id);
 
-          // Validar se ambas as contas pertencem ao workspace
+          if (from_account_id === to_account_id) {
+            throw new Error("As contas de origem e destino devem ser diferentes.");
+          }
+
+          if (parseFloat(amount) <= 0) {
+            throw new Error("O valor da transferência deve ser maior que zero.");
+          }
+
+          // Validar se ambas as contas pertencem ao workspace e não estão arquivadas
           const accountsCheck = await query(
-            "SELECT id FROM public.financial_accounts WHERE id IN ($1, $2) AND workspace_id = $3",
+            "SELECT id FROM public.financial_accounts WHERE id IN ($1, $2) AND workspace_id = $3 AND archived = false",
             [from_account_id, to_account_id, workspace_id]
           );
           if (accountsCheck.rows.length !== 2) {
-            throw new Error("Uma ou ambas as contas não pertencem a este espaço.");
+            throw new Error("Uma ou ambas as contas são inválidas ou estão arquivadas.");
           }
 
           const transfer_id = crypto.randomUUID();
           
-          // Lado da Saída
-          await query(
-            `INSERT INTO public.transactions (workspace_id, type, description, amount, status, competence_date, account_id, created_by, transfer_id) 
-             VALUES ($1, 'transfer', $2, $3, 'paid', $4, $5, $6, $7)`,
-            [workspace_id, description, -Math.abs(amount), date, from_account_id, userId, transfer_id]
-          );
+          // Usar transação atômica (BEGIN/COMMIT é implícito na query single string ou via Pool client)
+          // Aqui simulamos via multiplas queries, idealmente seria via client.query('BEGIN')
+          try {
+            // Lado da Saída
+            await query(
+              `INSERT INTO public.transactions (workspace_id, type, description, amount, status, competence_date, paid_date, account_id, created_by, transfer_id) 
+               VALUES ($1, 'transfer', $2, $3, 'paid', $4, $4, $5, $6, $7)`,
+              [workspace_id, description || 'Transferência enviada', -Math.abs(amount), date, from_account_id, userId, transfer_id]
+            );
 
-          // Lado da Entrada
-          await query(
-            `INSERT INTO public.transactions (workspace_id, type, description, amount, status, competence_date, account_id, created_by, transfer_id) 
-             VALUES ($1, 'transfer', $2, $3, 'paid', $4, $5, $6, $7)`,
-            [workspace_id, description, Math.abs(amount), date, to_account_id, userId, transfer_id]
-          );
-          
-          return { success: true, transfer_id };
+            // Lado da Entrada
+            await query(
+              `INSERT INTO public.transactions (workspace_id, type, description, amount, status, competence_date, paid_date, account_id, created_by, transfer_id) 
+               VALUES ($1, 'transfer', $2, $3, 'paid', $4, $4, $5, $6, $7)`,
+              [workspace_id, description || 'Transferência recebida', Math.abs(amount), date, to_account_id, userId, transfer_id]
+            );
+            
+            return { success: true, transfer_id };
+          } catch (err) {
+            console.error("Transfer error:", err);
+            throw new Error("Falha ao executar transferência no banco de dados.");
+          }
         }
         // Sprint B: Salvar Planejamento
         if (data.rpcName === "save_budget") {
