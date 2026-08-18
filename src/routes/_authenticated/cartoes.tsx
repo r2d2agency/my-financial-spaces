@@ -202,7 +202,7 @@ function Cartoes() {
                     className="flex-1 text-xs" 
                     asChild
                   >
-                    <Link to="/movimentacoes" search={{ card_id: card.id }}>
+                    <Link to="/movimentacoes" search={(prev: any) => ({ ...prev, card_id: card.id })}>
                       Ver Lançamentos
                     </Link>
                   </Button>
