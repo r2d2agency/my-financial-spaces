@@ -106,15 +106,18 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
       const me = await getUser({});
       const amount = form.type === "income" ? Math.abs(num(form.amount)) : -Math.abs(num(form.amount));
       
+      const isCard = form.type === 'expense' && form.payment_method === 'credit_card';
+
       const data = {
         workspace_id: wsId!,
         type: form.type as any,
         description: form.description.trim(),
         amount,
-        status: form.is_liquidated ? "paid" : "pending",
+        status: (form.is_liquidated && !isCard) ? "paid" : "pending",
         competence_date: form.competence_date,
-        paid_date: form.is_liquidated ? form.competence_date : null,
-        account_id: form.account_id || null,
+        paid_date: (form.is_liquidated && !isCard) ? form.competence_date : null,
+        account_id: isCard ? null : (form.account_id || null),
+        card_id: isCard ? (form.card_id || null) : null,
         category_id: form.category_id || null,
         person_name: form.person_name.trim() || null,
         notes: form.notes.trim() || null,
