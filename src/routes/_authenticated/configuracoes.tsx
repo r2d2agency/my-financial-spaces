@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { db } from "@/lib/db-browser";
 import { useWorkspace } from "@/lib/workspace";
 import { ROLES, brl, num, type Role } from "@/lib/finance";
-import { inviteMember, removeMember, updateMemberRole, cancelInvite } from "@/lib/workspace.functions";
+import { createMemberWithAccount, removeMember, updateMemberRole, cancelInvite } from "@/lib/workspace.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,11 +35,16 @@ function Configuracoes() {
   const qc = useQueryClient();
   const [name, setName] = useState(current?.workspaces?.name ?? "");
   const [income, setIncome] = useState(String(current?.workspaces?.expected_income ?? ""));
-  const [invite, setInvite] = useState({ email: "", role: "viewer" as Role });
+  const [invite, setInvite] = useState({ 
+    email: "", 
+    name: "",
+    password: "",
+    role: "viewer" as Role 
+  });
   const [openaiKey, setOpenaiKey] = useState("");
   
   const getUser = useServerFn(getCurrentUser);
-  const doInvite = useServerFn(inviteMember);
+  const doInvite = useServerFn(createMemberWithAccount);
   const doRemove = useServerFn(removeMember);
   const doUpdateRole = useServerFn(updateMemberRole);
   const doCancelInvite = useServerFn(cancelInvite);
@@ -135,13 +140,15 @@ function Configuracoes() {
         data: { 
           workspaceId: wsId!, 
           email: invite.email, 
+          name: invite.name,
+          password: invite.password,
           role: invite.role as any 
         } 
       });
     },
-    onSuccess: (res: any) => {
-      toast.success(res?.type === 'membership' ? "Membro adicionado!" : "Convite enviado!");
-      setInvite({ email: "", role: "viewer" });
+    onSuccess: () => {
+      toast.success("Membro criado e adicionado com sucesso!");
+      setInvite({ email: "", name: "", password: "", role: "viewer" });
       qc.invalidateQueries({ queryKey: ["settings"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -314,39 +321,63 @@ function Configuracoes() {
 
               {canManage && (
                 <div className="pt-6 border-t border-border">
-                  <h3 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider mb-4">+ Adicionar membro</h3>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <Input
-                      className="flex-1"
-                      placeholder="usuario@email.com"
-                      type="email"
-                      value={invite.email}
-                      onChange={(e) => setInvite((p) => ({ ...p, email: e.target.value }))}
-                    />
-                    <Select 
-                      value={invite.role} 
-                      onValueChange={(v) => setInvite((p) => ({ ...p, role: v as Role }))}
-                    >
-                      <SelectTrigger className="w-full sm:w-[180px]">
-                        <SelectValue placeholder="Permissão" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ROLES.filter((r) => r.value !== "owner").map((r) => (
-                          <SelectItem key={r.value} value={r.value}>
-                            <div className="flex flex-col gap-0.5">
-                              <span>{r.label}</span>
-                              <span className="text-[10px] text-muted-foreground font-normal">{(r as any).desc}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <h3 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider mb-4">+ Adicionar membro (Conta direta)</h3>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 items-end">
+                    <div className="space-y-1">
+                      <Label htmlFor="new-member-name" className="text-xs">Nome completo</Label>
+                      <Input
+                        id="new-member-name"
+                        placeholder="Nome do usuário"
+                        value={invite.name}
+                        onChange={(e) => setInvite((p) => ({ ...p, name: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="new-member-email" className="text-xs">E-mail</Label>
+                      <Input
+                        id="new-member-email"
+                        placeholder="usuario@email.com"
+                        type="email"
+                        value={invite.email}
+                        onChange={(e) => setInvite((p) => ({ ...p, email: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="new-member-password" className="text-xs">Senha inicial</Label>
+                      <Input
+                        id="new-member-password"
+                        placeholder="Senha temporária"
+                        type="text"
+                        value={invite.password}
+                        onChange={(e) => setInvite((p) => ({ ...p, password: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Permissão</Label>
+                      <Select 
+                        value={invite.role} 
+                        onValueChange={(v) => setInvite((p) => ({ ...p, role: v as Role }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Permissão" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ROLES.filter((r) => r.value !== "owner").map((r) => (
+                            <SelectItem key={r.value} value={r.value}>
+                              <div className="flex flex-col gap-0.5 text-left">
+                                <span>{r.label}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <Button 
                       onClick={() => sendInvite.mutate()} 
-                      disabled={!invite.email || sendInvite.isPending}
-                      className="w-full sm:w-auto"
+                      disabled={!invite.email || !invite.name || !invite.password || sendInvite.isPending}
+                      className="sm:col-span-2 lg:col-span-4"
                     >
-                      {sendInvite.isPending ? "Enviando..." : "Enviar convite"}
+                      {sendInvite.isPending ? "Criando..." : "Criar conta e adicionar"}
                     </Button>
                   </div>
                 </div>
