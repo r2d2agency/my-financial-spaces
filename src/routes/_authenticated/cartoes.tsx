@@ -196,11 +196,27 @@ function Cartoes() {
                 </div>
 
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => toast.info("Detalhes em breve")}>
-                    Ver Fatura
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1 text-xs" 
+                    asChild
+                  >
+                    <Link to="/movimentacoes" search={{ card_id: card.id }}>
+                      Ver Lançamentos
+                    </Link>
                   </Button>
-                  <Button size="sm" className="flex-1 text-xs" onClick={() => toast.info("Pagamento em breve")}>
-                    Pagar
+                  <Button 
+                    size="sm" 
+                    className="flex-1 text-xs" 
+                    disabled={used <= 0}
+                    onClick={() => {
+                      setSelectedCard(card);
+                      setPayForm(p => ({ ...p, amount: used, account_id: card.default_payment_account_id || "" }));
+                      setOpenPay(true);
+                    }}
+                  >
+                    Pagar Fatura
                   </Button>
                 </div>
               </CardContent>
