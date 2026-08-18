@@ -51,7 +51,15 @@ function Dashboard() {
   if (isLoading) return <div className="space-y-4"><Skeleton className="h-32 w-full" /><Skeleton className="h-64 w-full" /></div>;
 
   const { summary, cashFlow } = data || {};
-  const { s } = summary || {};
+  const { alerts, summary: indicators, upcoming, accounts, cards, top_categories } = summary || { 
+    alerts: { overdue_count: 0, overdue_amount: 0, soon_count: 0 },
+    summary: { total_balance: 0, income: 0, expense: 0, result: 0, to_receive: 0, to_pay: 0, prev_income: 0, prev_expense: 0 },
+    upcoming: [],
+    accounts: [],
+    cards: [],
+    top_categories: []
+  };
+  const { history = [], projections = [] } = cashFlow || {};
   
   return (
     <div className="space-y-6">
@@ -68,27 +76,27 @@ function Dashboard() {
       </div>
 
       {/* Alertas */}
-      {(summary.alerts.overdue_count > 0 || summary.alerts.soon_count > 0) && (
+      {(alerts.overdue_count > 0 || alerts.soon_count > 0) && (
         <div className="grid gap-4">
-          {summary.alerts.overdue_count > 0 && (
+          {alerts.overdue_count > 0 && (
             <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg p-4 flex gap-3 relative overflow-hidden group">
               <div className="absolute inset-0 bg-destructive/5 opacity-0 group-hover:opacity-100 transition-opacity" />
               <AlertCircle className="size-5 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm font-bold">Itens atrasados</p>
                 <p className="text-xs mt-1">
-                  {summary.alerts.overdue_count} lançamentos estão vencidos, totalizando {brl(summary.alerts.overdue_amount)}.
+                  {alerts.overdue_count} lançamentos estão vencidos, totalizando {brl(alerts.overdue_amount)}.
                 </p>
               </div>
               <Link to="/movimentacoes" search={{ account_id: undefined, card_id: undefined }} className="absolute inset-0 z-10" />
             </div>
           )}
-          {summary.alerts.soon_count > 0 && (
+          {alerts.soon_count > 0 && (
             <Alert className="border-amber-500/50 bg-amber-500/5 text-amber-600 dark:text-amber-400">
               <AlertCircle className="size-4" />
               <AlertTitle>Próximos compromissos</AlertTitle>
               <AlertDescription className="text-sm">
-                {summary.alerts.soon_count} contas vencem nos próximos 7 dias.
+                {alerts.soon_count} contas vencem nos próximos 7 dias.
               </AlertDescription>
             </Alert>
           )}
@@ -107,7 +115,7 @@ function Dashboard() {
             </CardHeader>
             <CardContent className="h-[300px] pt-4">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={cashFlow.history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <BarChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted/30" />
                   <XAxis 
                     dataKey="month" 
@@ -142,7 +150,7 @@ function Dashboard() {
             </CardHeader>
             <CardContent className="pt-0">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-2">
-                {cashFlow.projections.map((p: any) => (
+                {projections.map((p: any) => (
                   <div key={p.days} className="p-3 rounded-lg border bg-muted/20">
                     <p className="text-[10px] uppercase font-bold text-muted-foreground">{p.days} dias</p>
                     <p className={cn(
@@ -154,7 +162,7 @@ function Dashboard() {
                   </div>
                 ))}
               </div>
-              {cashFlow.projections.some((p: any) => p.estimated_balance < 0) && (
+              {projections.some((p: any) => p.estimated_balance < 0) && (
                 <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center gap-2 text-xs text-destructive">
                   <AlertCircle className="size-4" />
                   <span>Atenção: sua projeção indica saldo negativo nos próximos meses.</span>
@@ -172,10 +180,10 @@ function Dashboard() {
               </Button>
             </CardHeader>
               <CardContent className="pt-0 space-y-3">
-                {summary.upcoming.filter((t: any) => isIncomeType(t.type)).length === 0 ? (
+                {upcoming.filter((t: any) => isIncomeType(t.type)).length === 0 ? (
                   <p className="text-xs text-muted-foreground py-4 text-center">Nenhuma receita pendente.</p>
                 ) : (
-                  summary.upcoming.filter((t: any) => isIncomeType(t.type)).slice(0, 5).map((t: any) => (
+                  upcoming.filter((t: any) => isIncomeType(t.type)).slice(0, 5).map((t: any) => (
                     <div key={t.id} className="flex justify-between items-center group">
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{t.description}</p>
@@ -196,10 +204,10 @@ function Dashboard() {
               </Button>
             </CardHeader>
               <CardContent className="pt-0 space-y-3">
-                {summary.upcoming.filter((t: any) => !isIncomeType(t.type)).length === 0 ? (
+                {upcoming.filter((t: any) => !isIncomeType(t.type)).length === 0 ? (
                   <p className="text-xs text-muted-foreground py-4 text-center">Nenhuma despesa pendente.</p>
                 ) : (
-                  summary.upcoming.filter((t: any) => !isIncomeType(t.type)).slice(0, 5).map((t: any) => (
+                  upcoming.filter((t: any) => !isIncomeType(t.type)).slice(0, 5).map((t: any) => (
                     <div key={t.id} className="flex justify-between items-center">
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{t.description}</p>
@@ -221,7 +229,7 @@ function Dashboard() {
               <Button variant="ghost" size="icon" asChild className="h-8 w-8"><Link to="/contas"><ArrowRight className="size-4"/></Link></Button>
             </CardHeader>
             <CardContent className="pt-0 space-y-4">
-              {summary.accounts.map((a: any) => (
+              {accounts.map((a: any) => (
                 <div key={a.id} className="space-y-1.5">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground truncate mr-2">{a.name}</span>
@@ -232,7 +240,7 @@ function Dashboard() {
                   <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-primary" 
-                      style={{ width: `${Math.min(100, Math.max(0, (a.balance / summary.summary.total_balance) * 100))}%` }} 
+                      style={{ width: `${Math.min(100, Math.max(0, (a.balance / (indicators.total_balance || 1)) * 100))}%` }} 
                     />
                   </div>
                 </div>
@@ -246,7 +254,7 @@ function Dashboard() {
               <Button variant="ghost" size="icon" asChild className="h-8 w-8"><Link to="/cartoes"><ArrowRight className="size-4"/></Link></Button>
             </CardHeader>
             <CardContent className="pt-0 space-y-5">
-              {summary.cards.map((c: any) => {
+              {cards.map((c: any) => {
                 const pct = (c.used / c.limit) * 100;
                 return (
                   <div key={c.id} className="space-y-2">
@@ -274,10 +282,10 @@ function Dashboard() {
               <CardTitle className="text-base">Maiores gastos do mês</CardTitle>
             </CardHeader>
             <CardContent className="pt-0 space-y-4">
-              {summary.top_categories.length === 0 ? (
+              {top_categories.length === 0 ? (
                 <p className="text-xs text-muted-foreground py-4 text-center">Nenhum gasto registrado.</p>
               ) : (
-                summary.top_categories.map((cat: any) => (
+                top_categories.map((cat: any) => (
                   <div key={cat.name} className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{cat.name}</span>
                     <span className="text-sm font-bold">{brl(cat.total)}</span>
