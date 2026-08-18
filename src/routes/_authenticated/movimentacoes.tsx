@@ -35,6 +35,17 @@ import { getCurrentUser } from "@/lib/auth-client.functions";
 import { TransactionSummary } from "@/components/finance/TransactionSummary";
 import { TransactionDetailsDrawer } from "@/components/finance/TransactionDetailsDrawer";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TransactionDialog } from "@/components/finance/TransactionDialog";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -67,6 +78,11 @@ function Movimentacoes() {
   // Estados de UI
   const [selectedTx, setSelectedTx] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingTx, setEditingTx] = useState<any>(null);
+  const [scopeDialogOpen, setScopeDialogOpen] = useState(false);
+  const [pendingScopeAction, setPendingScopeAction] = useState<{ type: 'edit' | 'delete', tx: any } | null>(null);
+
 
   const { start, end, startIso, endIso } = monthRange(ref);
 
@@ -211,10 +227,14 @@ function Movimentacoes() {
             </Button>
           </div>
           
-          <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm" onClick={() => {}}>
+          <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm" onClick={() => {
+            setEditingTx(null);
+            setIsFormOpen(true);
+          }}>
             <Plus className="size-4 mr-2" />
             Novo lançamento
           </Button>
+
         </div>
       </header>
 
@@ -339,7 +359,11 @@ function Movimentacoes() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {}}>Editar</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setEditingTx(t);
+                              setIsFormOpen(true);
+                            }}>Editar</DropdownMenuItem>
+
                             {t.status === 'pending' ? (
                               <DropdownMenuItem onClick={() => settle.mutate({ id: t.id })}>
                                 Marcar como {isIncomeType(t.type) ? 'recebido' : 'pago'}
@@ -399,12 +423,76 @@ function Movimentacoes() {
         onOpenChange={setIsDetailsOpen}
         onSettle={() => settle.mutate({ id: selectedTx.id })}
         onRevert={() => revert.mutate(selectedTx.id)}
-        onEdit={() => { /* abrir formulário de edição */ }}
-        onDelete={() => remove.mutate({ id: selectedTx.id })}
+        onEdit={() => {
+          if (selectedTx.recurring_id || selectedTx.installment_group) {
+            setPendingScopeAction({ type: 'edit', tx: selectedTx });
+            setScopeDialogOpen(true);
+          } else {
+            setEditingTx(selectedTx);
+            setIsFormOpen(true);
+          }
+        }}
+        onDelete={() => {
+          if (selectedTx.recurring_id || selectedTx.installment_group) {
+            setPendingScopeAction({ type: 'delete', tx: selectedTx });
+            setScopeDialogOpen(true);
+          } else {
+            remove.mutate({ id: selectedTx.id });
+          }
+        }}
       />
+
+      <TransactionDialog 
+        open={isFormOpen} 
+        onOpenChange={setIsFormOpen} 
+        tx={editingTx} 
+      />
+
+      <AlertDialog open={scopeDialogOpen} onOpenChange={setScopeDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingScopeAction?.type === 'edit' ? 'Editar lançamento recorrente' : 'Excluir lançamento recorrente'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Este lançamento faz parte de uma série recorrente ou parcelamento. Deseja aplicar a ação a qual escopo?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-2 py-4">
+            <Button 
+              variant="outline" 
+              className="justify-start h-auto py-3 px-4 flex-col items-start gap-1"
+              onClick={() => {
+                if (pendingScopeAction?.type === 'edit') {
+                  setEditingTx(pendingScopeAction.tx);
+                  setIsFormOpen(true);
+                } else {
+                  remove.mutate({ id: pendingScopeAction?.tx.id });
+                }
+                setScopeDialogOpen(false);
+              }}
+            >
+              <span className="font-bold text-sm">Somente este lançamento</span>
+              <span className="text-xs text-muted-foreground">Altera apenas esta ocorrência selecionada.</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              disabled
+              className="justify-start h-auto py-3 px-4 flex-col items-start gap-1 opacity-60 cursor-not-allowed"
+            >
+              <span className="font-bold text-sm">Este e os próximos (Em breve)</span>
+              <span className="text-xs text-muted-foreground">Altera esta e todas as ocorrências futuras.</span>
+            </Button>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+
 
 const TabButton = ({ active, onClick, label, count }: any) => (
   <button 
