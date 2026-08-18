@@ -51,18 +51,20 @@ export const signIn = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const res = await query(
-      "SELECT id, password_hash, must_change_password FROM auth.users WHERE email = $1",
+      "SELECT id, password_hash, must_change_password FROM auth.users WHERE lower(trim(email)) = lower(trim($1))",
       [data.email]
     );
     const user = res.rows[0];
     
     if (!user) {
+      console.error(`Falha de login: Usuário não encontrado para o email ${data.email}`);
       throw new Error("Credenciais inválidas.");
     }
 
     // Validar senha (Sprint A)
     const valid = await comparePassword(data.password, user.password_hash || "");
     if (!valid) {
+      console.error(`Falha de login: Senha incorreta para o email ${data.email}`);
       throw new Error("Credenciais inválidas.");
     }
 

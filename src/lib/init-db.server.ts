@@ -16,11 +16,23 @@ async function seedSuperAdmin() {
   const password = envPassword || `Adm-${crypto.randomUUID().slice(0, 12)}`;
   const name = process.env["SUPERADMIN_NAME"] || "Super Admin";
 
-  const existing = await query("SELECT id FROM auth.users WHERE lower(email) = $1", [email]);
+  // Buscamos o usuário ignorando case e espaços
+  const existing = await query("SELECT id, password_hash FROM auth.users WHERE lower(trim(email)) = lower($1)", [email]);
   let userId: string;
 
   if (existing.rows.length > 0) {
     userId = existing.rows[0].id;
+    console.log(`Superadmin já existe: ${email}`);
+    
+    // Se a senha foi alterada via ENV, atualizamos o hash para garantir que o que está no .env funcione
+    if (envPassword) {
+      const pwHash = await hashPassword(password);
+      await query(
+        "UPDATE auth.users SET password_hash = $1 WHERE id = $2",
+        [pwHash, userId]
+      );
+      console.log(`Senha do Superadmin sincronizada com SUPERADMIN_PASSWORD para ${email}`);
+    }
   } else {
     const pwHash = await hashPassword(password);
     const res = await query(
