@@ -322,7 +322,7 @@ export async function initializeDatabase() {
           token TEXT NOT NULL UNIQUE DEFAULT gen_random_uuid(),
           status public.invite_status NOT NULL DEFAULT 'pending',
           invited_by UUID REFERENCES auth.users(id),
-          expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '7 days'),
+          expires_at TIMESTAMPTZ,
           created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
 
