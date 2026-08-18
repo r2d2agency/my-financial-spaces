@@ -97,6 +97,7 @@ function Movimentacoes() {
     queryKey: ["transactions", wsId, startIso, endIso, tab, statusFilter, search],
     enabled: !!wsId,
     queryFn: async () => {
+      const searchParams = Route.useSearch();
       let query = db.from("transactions")
         .select("*")
         .eq("workspace_id", wsId!)
@@ -107,6 +108,9 @@ function Movimentacoes() {
       if (tab !== "all") query = query.eq("type", tab);
       if (statusFilter === "pending") query = query.eq("status", "pending");
       else if (statusFilter === "paid") query = query.eq("status", "paid");
+      
+      if (searchParams.account_id) query = query.eq("account_id", searchParams.account_id);
+      if (searchParams.card_id) query = query.eq("card_id", searchParams.card_id);
       
       const { data } = await query.execute();
       return Array.isArray(data) ? data : [];
