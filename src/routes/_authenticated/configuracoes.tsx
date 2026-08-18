@@ -52,14 +52,19 @@ function Configuracoes() {
         const [members, invites, sub] = await Promise.all([
           db.rpc("list_ws_members", { _ws: wsId! }),
           db.from("workspace_invites").select("*").eq("workspace_id", wsId!).execute(),
-          db.from("subscriptions").select("status, current_period_end, plans(name, price_cents)").eq("workspace_id", wsId!).maybeSingle(),
+          db.from("subscriptions").select("status, current_period_end, plan_id").eq("workspace_id", wsId!).maybeSingle(),
         ]);
+        let plan = null;
+        if (sub.data?.plan_id) {
+           const { data: p } = await db.from("plans").select("name, price_cents").eq("id", sub.data.plan_id).maybeSingle();
+           plan = p;
+        }
         const { data: config } = await db.from("platform_configs").select("value").eq("key", "openai_api_key").maybeSingle();
         
         return { 
           members: Array.isArray(members.data) ? members.data : [], 
           invites: (Array.isArray(invites.data) ? invites.data : []).filter((i: any) => i.status === 'pending'), 
-          sub: sub.data, 
+          sub: sub.data ? { ...sub.data, plans: plan } : null, 
           openaiKey: config?.value ?? "" 
         };
       } catch (err) {
