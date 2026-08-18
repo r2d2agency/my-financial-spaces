@@ -621,6 +621,30 @@ export async function initializeDatabase() {
         ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS transfer_id UUID;
         ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS notes TEXT;
         ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS notes TEXT;
+
+        -- Sprint C: Ciclo de Faturas de Cartão (Novos Campos)
+        ALTER TABLE public.credit_cards ADD COLUMN IF NOT EXISTS institution TEXT;
+        ALTER TABLE public.credit_cards ADD COLUMN IF NOT EXISTS last_digits TEXT;
+        ALTER TABLE public.credit_cards ADD COLUMN IF NOT EXISTS default_payment_account_id UUID REFERENCES public.financial_accounts(id);
+        
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS invoice_id UUID REFERENCES public.credit_card_invoices(id);
+
+        -- Faturas (Tabela principal para Etapa 5)
+        CREATE TABLE IF NOT EXISTS public.credit_card_invoices (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+          card_id UUID NOT NULL REFERENCES public.credit_cards(id) ON DELETE CASCADE,
+          period_month INTEGER NOT NULL,
+          period_year INTEGER NOT NULL,
+          closing_date DATE NOT NULL,
+          due_date DATE NOT NULL,
+          status public.tx_status NOT NULL DEFAULT 'pending', -- pending, paid, overdue
+          total_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          UNIQUE (card_id, period_month, period_year)
+        );
+
+        DROP TABLE IF EXISTS public.credit_card_bills;
       `;
 
       await query(sql);
