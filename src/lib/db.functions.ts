@@ -328,6 +328,7 @@ export const dbQuery = createServerFn({ method: "POST" })
 
           const currentBalance = initialBalance + parseFloat(trans.rows[0].total);
           return { current_balance: currentBalance };
+        }
         if (data.rpcName === "get_card_details") {
           const { card_id, workspace_id } = data.rpcArgs;
           await verifyAuth(workspace_id);
@@ -340,9 +341,6 @@ export const dbQuery = createServerFn({ method: "POST" })
 
           const limit = parseFloat(card.rows[0].credit_limit);
 
-          // Limite utilizado = soma de todas as transações PENDENTES associadas a este cartão
-          // Transações pagas (liquidação de fatura) não afetam o limite diretamente aqui, 
-          // mas as compras sim.
           const used = await query(
             "SELECT COALESCE(SUM(ABS(amount)), 0) as total FROM public.transactions WHERE card_id = $1 AND workspace_id = $2 AND status = 'pending'",
             [card_id, workspace_id]
@@ -369,7 +367,6 @@ export const dbQuery = createServerFn({ method: "POST" })
           const card = await query("SELECT name FROM public.credit_cards WHERE id = $1", [invoice.rows[0].card_id]);
           const cardName = card.rows[0]?.name || "Cartão";
 
-          // 1. Criar transação de pagamento (diminui saldo da conta)
           await query(
             `INSERT INTO public.transactions (workspace_id, type, description, amount, status, competence_date, paid_date, account_id, created_by, notes) 
              VALUES ($1, 'card_payment', $2, $3, 'paid', $4, $4, $5, $6, $7)`,
@@ -384,13 +381,11 @@ export const dbQuery = createServerFn({ method: "POST" })
             ]
           );
 
-          // 2. Marcar transações da fatura como pagas para liberar limite
           await query(
             "UPDATE public.transactions SET status = 'paid', paid_date = $1 WHERE invoice_id = $2 AND workspace_id = $3",
             [payment_date, invoice_id, workspace_id]
           );
 
-          // 3. Atualizar status da fatura
           await query(
             "UPDATE public.credit_card_invoices SET status = 'paid' WHERE id = $1 AND workspace_id = $2",
             [invoice_id, workspace_id]
