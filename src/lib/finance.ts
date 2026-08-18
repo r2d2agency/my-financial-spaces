@@ -35,11 +35,11 @@ export const ACCOUNT_KINDS = [
 ] as const;
 
 export const ROLES = [
-  { value: "owner", label: "Proprietário", desc: "Controle completo, assinatura e propriedade" },
-  { value: "admin", label: "Administrador", desc: "Cadastros, lançamentos, dívidas, metas e convites" },
-  { value: "editor", label: "Editor", desc: "Lança e edita movimentações e comprovantes" },
-  { value: "viewer", label: "Visualizador", desc: "Apenas consulta dashboards e relatórios" },
-  { value: "consultant", label: "Consultor / contador", desc: "Consulta e exporta relatórios" },
+  { value: "owner", label: "Proprietário", desc: "Controle completo do espaço e assinatura" },
+  { value: "admin", label: "Administrador", desc: "Gestão total de dados e membros" },
+  { value: "manager", label: "Gerente", desc: "Gestão de dados financeiros e operacionais" },
+  { value: "operator", label: "Operador", desc: "Lançamentos e edições de movimentações" },
+  { value: "viewer", label: "Visualizador", desc: "Apenas consulta de dados e relatórios" },
 ] as const;
 
 export type Role = (typeof ROLES)[number]["value"];

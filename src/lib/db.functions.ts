@@ -94,6 +94,9 @@ export const dbQuery = createServerFn({ method: "POST" })
     if (data.action === "insert") {
       // Validação cruzada (exemplo para transactions)
       if (data.table === "transactions" && data.data) {
+        data.data.created_by = userId;
+        data.data.updated_at = new Date();
+        data.data.updated_by = userId;
         const { workspace_id, category_id, account_id, contact_id } = data.data;
         if (category_id) {
           const cat = await query("SELECT 1 FROM public.categories WHERE id = $1 AND workspace_id = $2", [category_id, workspace_id]);
@@ -105,6 +108,10 @@ export const dbQuery = createServerFn({ method: "POST" })
         }
       }
 
+      if (data.data) {
+        data.data.updated_at = new Date();
+        data.data.updated_by = userId;
+      }
       const keys = Object.keys(data.data);
       const vals = Object.values(data.data);
       const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
