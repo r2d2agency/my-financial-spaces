@@ -37,20 +37,24 @@ export const adminOverview = createServerFn({ method: "GET" })
     const admin = await adminClient();
     await assertPlatformAdmin(admin, context!.userId);
     
-    // Simplificando contagens para PG puro
-    const [ws, users, txs] = await Promise.all([
-      admin.from("workspaces").select("*"),
-      admin.from("profiles").select("*"),
-      admin.from("transactions").select("*")
+    const { query } = await import("@/lib/db.server");
+    
+    const [wsRes, usersRes, txsRes, activeRes, trialingRes, riskRes] = await Promise.all([
+      query("SELECT count(*) FROM public.workspaces"),
+      query("SELECT count(*) FROM auth.users"),
+      query("SELECT count(*) FROM public.transactions"),
+      query("SELECT count(*) FROM public.subscriptions WHERE status = 'active'"),
+      query("SELECT count(*) FROM public.subscriptions WHERE status = 'trialing'"),
+      query("SELECT count(*) FROM public.subscriptions WHERE status IN ('past_due', 'suspended')")
     ]);
     
     return {
-      workspaces: Array.isArray(ws.data) ? ws.data.length : 0,
-      users: Array.isArray(users.data) ? users.data.length : 0,
-      transactions: Array.isArray(txs.data) ? txs.data.length : 0,
-      active: 0,
-      trialing: 0,
-      atRisk: 0,
+      workspaces: parseInt(wsRes.rows[0].count),
+      users: parseInt(usersRes.rows[0].count),
+      transactions: parseInt(txsRes.rows[0].count),
+      active: parseInt(activeRes.rows[0].count),
+      trialing: parseInt(trialingRes.rows[0].count),
+      atRisk: parseInt(riskRes.rows[0].count),
     };
   });
 
@@ -62,24 +66,47 @@ export const adminListWorkspaces = createServerFn({ method: "GET" })
     const admin = await adminClient();
     await assertPlatformAdmin(admin, context!.userId);
     
-    const { data: rows, error } = await admin.from("workspaces").select("*");
-    if (error) throw new Error(error.message);
+    const { query } = await import("@/lib/db.server");
+    let sql = `
+      SELECT 
+        w.*, 
+        p.full_name as owner_name, 
+        p.email as owner_email,
+        s.status as sub_status,
+        s.current_period_end,
+        s.plan_id,
+        pl.name as plan_name,
+        (SELECT count(*) FROM public.workspace_members WHERE workspace_id = w.id) as members_count
+      FROM public.workspaces w
+      LEFT JOIN public.profiles p ON p.id = w.owner_id
+      LEFT JOIN public.subscriptions s ON s.workspace_id = w.id
+      LEFT JOIN public.plans pl ON pl.id = s.plan_id
+    `;
+    const params: any[] = [];
+    if (data.search) {
+      sql += " WHERE w.name ILIKE $1";
+      params.push(`%${data.search}%`);
+    }
+    sql += " ORDER BY w.created_at DESC";
 
-    const filtered = (rows || []).filter((r: any) => 
-      !data.search || r.name?.toLowerCase().includes(data.search.toLowerCase())
-    );
+    const res = await query(sql, params);
 
-    return filtered.map((r: any) => ({
+    return res.rows.map((r: any) => ({
       id: r.id,
       name: r.name,
       suspended: r.suspended,
       onboarding_done: r.onboarding_done,
       created_at: r.created_at,
       expected_income: Number(r.expected_income ?? 0),
-      members: 0,
-      owner_email: null,
-      owner_name: null,
-      subscription: null,
+      members: parseInt(r.members_count || 0),
+      owner_email: r.owner_email,
+      owner_name: r.owner_name,
+      subscription: {
+        status: r.sub_status,
+        plan_id: r.plan_id,
+        plan_name: r.plan_name,
+        current_period_end: r.current_period_end ? new Date(r.current_period_end).toISOString().split('T')[0] : null
+      },
     }));
   });
 
@@ -108,9 +135,13 @@ export const adminListPlans = createServerFn({ method: "GET" })
     const { adminClient, assertPlatformAdmin } = await import("@/lib/admin.server");
     const admin = await adminClient();
     await assertPlatformAdmin(admin, context!.userId);
-    const { data: plans, error } = await admin.from("plans").select("*");
-    if (error) throw new Error(error.message);
-    return (plans ?? []).map((p: any) => ({ ...p, subscribers: 0 }));
+    const { query } = await import("@/lib/db.server");
+    const res = await query(`
+      SELECT p.*, (SELECT count(*) FROM public.subscriptions WHERE plan_id = p.id) as subscribers_count 
+      FROM public.plans p 
+      ORDER BY p.price_cents ASC
+    `);
+    return res.rows.map((p: any) => ({ ...p, subscribers: parseInt(p.subscribers_count || 0) }));
   });
 
 export const adminSavePlan = createServerFn({ method: "POST" })
@@ -145,8 +176,26 @@ export const adminUpdateSubscription = createServerFn({ method: "POST" })
   .validator((input: any) => input)
   .handler(async ({ data, context }) => {
     const { adminClient, assertPlatformAdmin, logAdminAction } = await import("@/lib/admin.server");
+    const { query } = await import("@/lib/db.server");
     const admin = await adminClient();
     await assertPlatformAdmin(admin, context!.userId);
+    
+    // Upsert subscription
+    const existing = await query("SELECT id FROM public.subscriptions WHERE workspace_id = $1", [data.workspaceId]);
+    
+    if (existing.rows.length > 0) {
+      await query(
+        "UPDATE public.subscriptions SET plan_id = $1, status = $2, current_period_end = $3, updated_at = NOW() WHERE workspace_id = $4",
+        [data.planId, data.status, data.periodEnd, data.workspaceId]
+      );
+    } else {
+      await query(
+        "INSERT INTO public.subscriptions (workspace_id, plan_id, status, current_period_end) VALUES ($1, $2, $3, $4)",
+        [data.workspaceId, data.planId, data.status, data.periodEnd]
+      );
+    }
+
+    await logAdminAction(admin, context!.userId, "subscription.update", "subscriptions", data.workspaceId, data, data.workspaceId);
     return { ok: true };
   });
 
@@ -175,7 +224,14 @@ export const adminListAudit = createServerFn({ method: "GET" })
     const { adminClient, assertPlatformAdmin } = await import("@/lib/admin.server");
     const admin = await adminClient();
     await assertPlatformAdmin(admin, context!.userId);
-    const { data: rows, error } = await admin.from("audit_logs").select("*");
-    if (error) throw new Error(error.message);
-    return rows ?? [];
+    const { query } = await import("@/lib/db.server");
+    let sql = "SELECT * FROM public.audit_logs";
+    const params: any[] = [];
+    if (data.workspaceId) {
+      sql += " WHERE workspace_id = $1";
+      params.push(data.workspaceId);
+    }
+    sql += " ORDER BY created_at DESC LIMIT 100";
+    const res = await query(sql, params);
+    return res.rows;
   });
