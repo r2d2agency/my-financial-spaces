@@ -57,11 +57,13 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
         competence_date: tx.competence_date ? iso(new Date(tx.competence_date)) : iso(new Date()),
         status: tx.status || "pending",
         account_id: tx.account_id || "",
+        card_id: tx.card_id || "",
         category_id: tx.category_id || "",
         person_name: tx.person_name || "",
         notes: tx.notes || "",
         account_dest_id: "",
         is_liquidated: tx.status === 'paid',
+        payment_method: tx.card_id ? "credit_card" : "account",
       });
     } else if (open) {
       setForm({
@@ -71,11 +73,13 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
         competence_date: iso(new Date()),
         status: "pending",
         account_id: "",
+        card_id: "",
         category_id: "",
         person_name: "",
         notes: "",
         account_dest_id: "",
         is_liquidated: false,
+        payment_method: "account",
       });
     }
   }, [tx, open]);
