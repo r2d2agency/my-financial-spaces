@@ -43,23 +43,30 @@ function Configuracoes() {
   const doUpdateRole = useServerFn(updateMemberRole);
   const doCancelInvite = useServerFn(cancelInvite);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["settings", wsId],
     enabled: !!wsId,
     queryFn: async () => {
-      const [members, invites, sub] = await Promise.all([
-        db.rpc("list_ws_members", { _ws: wsId! }),
-        db.from("workspace_invites").select("*").eq("workspace_id", wsId!).execute(),
-        db.from("subscriptions").select("status, current_period_end, plans(name, price_cents)").eq("workspace_id", wsId!).maybeSingle(),
-      ]);
-      const { data: config } = await db.from("platform_configs").select("value").eq("key", "openai_api_key").maybeSingle();
-      return { 
-        members: members.data ?? [], 
-        invites: (invites.data ?? []).filter((i: any) => i.status === 'pending'), 
-        sub: sub.data, 
-        openaiKey: config?.value ?? "" 
-      };
+      try {
+        const [members, invites, sub] = await Promise.all([
+          db.rpc("list_ws_members", { _ws: wsId! }),
+          db.from("workspace_invites").select("*").eq("workspace_id", wsId!).execute(),
+          db.from("subscriptions").select("status, current_period_end, plans(name, price_cents)").eq("workspace_id", wsId!).maybeSingle(),
+        ]);
+        const { data: config } = await db.from("platform_configs").select("value").eq("key", "openai_api_key").maybeSingle();
+        
+        return { 
+          members: Array.isArray(members.data) ? members.data : [], 
+          invites: (Array.isArray(invites.data) ? invites.data : []).filter((i: any) => i.status === 'pending'), 
+          sub: sub.data, 
+          openaiKey: config?.value ?? "" 
+        };
+      } catch (err) {
+        console.error("Erro ao carregar configurações:", err);
+        throw err;
+      }
     },
+    retry: 1,
   });
 
   const saveAi = useMutation({
