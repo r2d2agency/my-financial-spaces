@@ -269,7 +269,7 @@ function Dashboard() {
             </CardHeader>
             <CardContent className="pt-0 space-y-5">
               {cards.map((c: any) => {
-                const pct = (c.used / c.limit) * 100;
+                const pct = c.limit > 0 ? (c.used / c.limit) * 100 : 0;
                 return (
                   <div key={c.id} className="space-y-2">
                     <div className="flex justify-between items-end">
