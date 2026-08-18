@@ -18,17 +18,22 @@ export const claimPlatformAdmin = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { adminClient, logAdminAction } = await import("@/lib/admin.server");
     const admin = await adminClient();
-    const any = await admin.from("user_roles").select("*").eq("role", "platform_admin");
+    
+    const any = await admin.from("user_roles").select("*").eq("role", "platform_admin").execute();
     const count = Array.isArray(any.data) ? any.data.length : 0;
     
     if (count > 0) throw new Error("A plataforma já possui um administrador.");
+    
     const { error } = await admin
       .from("user_roles")
       .insert({ user_id: context!.userId, role: "platform_admin" });
+      
     if (error) throw new Error(error.message);
+    
     await logAdminAction(admin, context!.userId, "platform_admin.claim", "user_roles", context!.userId);
     return { ok: true };
   });
+
 
 export const adminOverview = createServerFn({ method: "GET" })
   .middleware([requireAuth])
