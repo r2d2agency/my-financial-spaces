@@ -40,6 +40,7 @@ export const TX_TYPES = [
   { value: "debt_payment", label: "Pagamento de dívida" },
   { value: "card_payment", label: "Pagamento de cartão" },
   { value: "adjustment", label: "Ajuste de saldo" },
+  { value: "extra_income", label: "Receita Extra" },
 ] as const;
 
 export const ACCOUNT_KINDS = [
