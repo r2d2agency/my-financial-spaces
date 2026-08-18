@@ -4,14 +4,28 @@ import { query } from "./db.server";
 import { getSession } from "./auth.server";
 import { getRequest } from "@tanstack/react-start/server";
 
-const verifyAuth = async () => {
+const verifyAuth = async (workspaceId?: string) => {
   const request = getRequest();
   const authHeader = request.headers.get('authorization');
   const token = authHeader?.replace('Bearer ', '');
   if (!token) throw new Error("Não autorizado");
   const session = await getSession(token);
   if (!session) throw new Error("Sessão inválida");
-  return session.user_id;
+  
+  const userId = session.user_id;
+
+  // Se workspaceId for fornecido, validar acesso
+  if (workspaceId) {
+    const access = await query(
+      "SELECT 1 FROM public.workspace_members WHERE workspace_id = $1 AND user_id = $2",
+      [workspaceId, userId]
+    );
+    if (access.rows.length === 0) {
+      throw new Error("Acesso negado a este espaço financeiro.");
+    }
+  }
+
+  return userId;
 };
 
 export const dbQuery = createServerFn({ method: "POST" })
@@ -30,7 +44,9 @@ export const dbQuery = createServerFn({ method: "POST" })
     }).parse(data)
   )
   .handler(async ({ data }) => {
-    const userId = await verifyAuth();
+    const filters: any = data.filters || {};
+    const workspaceId = filters.workspace_id || (data.data?.workspace_id);
+    const userId = await verifyAuth(workspaceId);
     
     if (data.action === "select") {
       let sql = `SELECT ${data.columns || "*"} FROM ${data.table}`;
@@ -76,6 +92,19 @@ export const dbQuery = createServerFn({ method: "POST" })
     }
 
     if (data.action === "insert") {
+      // Validação cruzada (exemplo para transactions)
+      if (data.table === "transactions" && data.data) {
+        const { workspace_id, category_id, account_id, contact_id } = data.data;
+        if (category_id) {
+          const cat = await query("SELECT 1 FROM public.categories WHERE id = $1 AND workspace_id = $2", [category_id, workspace_id]);
+          if (cat.rows.length === 0) throw new Error("Categoria inválida para este espaço.");
+        }
+        if (account_id) {
+          const acc = await query("SELECT 1 FROM public.financial_accounts WHERE id = $1 AND workspace_id = $2", [account_id, workspace_id]);
+          if (acc.rows.length === 0) throw new Error("Conta inválida para este espaço.");
+        }
+      }
+
       const keys = Object.keys(data.data);
       const vals = Object.values(data.data);
       const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
@@ -143,6 +172,19 @@ export const dbQuery = createServerFn({ method: "POST" })
         // Sprint A: Transferência entre contas
         if (data.rpcName === "execute_transfer") {
           const { from_account_id, to_account_id, amount, description, date, workspace_id } = data.rpcArgs;
+          
+          // Validar acesso ao workspace
+          await verifyAuth(workspace_id);
+
+          // Validar se ambas as contas pertencem ao workspace
+          const accountsCheck = await query(
+            "SELECT id FROM public.financial_accounts WHERE id IN ($1, $2) AND workspace_id = $3",
+            [from_account_id, to_account_id, workspace_id]
+          );
+          if (accountsCheck.rows.length !== 2) {
+            throw new Error("Uma ou ambas as contas não pertencem a este espaço.");
+          }
+
           const transfer_id = crypto.randomUUID();
           
           // Lado da Saída
