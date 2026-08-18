@@ -66,3 +66,44 @@ export const signIn = createServerFn({ method: "POST" })
     const sessionId = await createSession(user.id);
     return { sessionId };
   });
+
+/** Verifica se o usuário logado precisa definir uma nova senha (superadmin semeado). */
+export const mustChangePassword = createServerFn({ method: "POST" })
+  .validator((data: unknown) => z.object({ sessionId: z.string() }).parse(data))
+  .handler(async ({ data }) => {
+    const session = await getSession(data.sessionId);
+    if (!session) return { required: false };
+    const res = await query(
+      "SELECT must_change_password FROM auth.users WHERE id = $1",
+      [session.user_id]
+    );
+    return { required: res.rows[0]?.must_change_password === true };
+  });
+
+/** Define uma nova senha e limpa a obrigatoriedade de troca. */
+export const changePassword = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z
+      .object({
+        sessionId: z.string(),
+        newPassword: z.string().min(8, "A nova senha deve ter ao menos 8 caracteres."),
+      })
+      .parse(data)
+  )
+  .handler(async ({ data }) => {
+    const session = await getSession(data.sessionId);
+    if (!session) throw new Error("Sessão expirada. Entre novamente.");
+
+    const current = await query("SELECT password_hash FROM auth.users WHERE id = $1", [session.user_id]);
+    if (current.rows[0]?.password_hash) {
+      const same = await comparePassword(data.newPassword, current.rows[0].password_hash);
+      if (same) throw new Error("A nova senha deve ser diferente da senha padrão.");
+    }
+
+    const pwHash = await hashPassword(data.newPassword);
+    await query(
+      "UPDATE auth.users SET password_hash = $1, must_change_password = false WHERE id = $2",
+      [pwHash, session.user_id]
+    );
+    return { success: true };
+  });
