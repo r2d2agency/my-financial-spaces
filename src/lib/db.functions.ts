@@ -614,6 +614,7 @@ export const dbQuery = createServerFn({ method: "POST" })
             projections,
             current_balance: currentTotal
           };
+        }
         if (data.rpcName === "create_recurring_installments") {
           const { 
             workspace_id, type, description, amount, status, date, 
