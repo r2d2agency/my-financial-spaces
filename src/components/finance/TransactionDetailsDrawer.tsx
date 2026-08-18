@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { brl, isIncomeType, TX_TYPES } from "@/lib/finance";
 import { Calendar, CreditCard, User, Tag, Clock, Wallet, FileText, Trash2, Edit } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const TransactionDetailsDrawer = ({ tx, open, onOpenChange, onSettle, onRevert, onEdit, onDelete }: any) => {
   if (!tx) return null;
@@ -53,13 +54,26 @@ export const TransactionDetailsDrawer = ({ tx, open, onOpenChange, onSettle, onR
 
         <SheetFooter className="pt-6 border-t flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={onEdit} className="h-10 w-10">
-              <Edit className="size-4" />
-            </Button>
-            <Button variant="outline" size="icon" onClick={onDelete} className="h-10 w-10 text-destructive hover:text-destructive">
-              <Trash2 className="size-4" />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" onClick={onEdit} className="h-10 w-10" aria-label="Editar lançamento">
+                    <Edit className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Editar lançamento</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" onClick={onDelete} className="h-10 w-10 text-destructive hover:text-destructive" aria-label="Excluir lançamento">
+                    <Trash2 className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Excluir lançamento</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
+
           
           {!isPaid ? (
             <Button className="w-full sm:w-auto px-8" onClick={onSettle}>
