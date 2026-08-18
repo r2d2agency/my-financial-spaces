@@ -6,33 +6,22 @@ import { db } from "@/lib/db-browser";
 import { useWorkspace } from "@/lib/workspace";
 import { TX_TYPES, iso, num } from "@/lib/finance";
 import { getCurrentUser } from "@/lib/auth-client.functions";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter 
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, ChevronDown, Plus } from "lucide-react";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface TransactionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  tx?: any; // Se presente, modo edição
+  tx?: any;
 }
 
 export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogProps) {
@@ -51,9 +40,12 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
     category_id: "",
     person_name: "",
     notes: "",
+    account_dest_id: "",
+    is_liquidated: false,
   });
 
-  // Reset/Load form
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   useEffect(() => {
     if (tx && open) {
       setForm({
@@ -66,6 +58,8 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
         category_id: tx.category_id || "",
         person_name: tx.person_name || "",
         notes: tx.notes || "",
+        account_dest_id: "",
+        is_liquidated: tx.status === 'paid',
       });
     } else if (open) {
       setForm({
@@ -78,11 +72,12 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
         category_id: "",
         person_name: "",
         notes: "",
+        account_dest_id: "",
+        is_liquidated: false,
       });
     }
   }, [tx, open]);
 
-  // Queries para selects
   const { data: meta } = useQuery({
     queryKey: ["meta", wsId],
     enabled: !!wsId && open,
@@ -108,9 +103,9 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
         type: form.type as any,
         description: form.description.trim(),
         amount,
-        status: form.status as any,
+        status: form.is_liquidated ? "paid" : "pending",
         competence_date: form.competence_date,
-        paid_date: form.status === "paid" ? form.competence_date : null,
+        paid_date: form.is_liquidated ? form.competence_date : null,
         account_id: form.account_id || null,
         category_id: form.category_id || null,
         person_name: form.person_name.trim() || null,
@@ -131,135 +126,98 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
       qc.invalidateQueries({ queryKey: ["transactions"] });
       onOpenChange(false);
     },
-    onError: (e: Error) => {
-      console.error("Erro ao salvar transação:", e);
-      toast.error("Não foi possível salvar as alterações. Tente novamente.");
-    },
+    onError: (e: Error) => toast.error("Erro ao salvar: " + e.message),
   });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Editar lançamento" : "Novo lançamento"}</DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-6 py-4">
+          <Tabs value={form.type} onValueChange={(v) => setForm(f => ({ ...f, type: v }))} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 h-12">
+              <TabsTrigger value="income">Receita</TabsTrigger>
+              <TabsTrigger value="expense">Despesa</TabsTrigger>
+              <TabsTrigger value="transfer">Transferência</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Tipo</Label>
-              <Select value={form.type} onValueChange={(v) => setForm(f => ({ ...f, type: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {TX_TYPES.map(t => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Valor</Label>
+              <Label>Descrição</Label>
               <Input 
-                type="number" 
-                step="0.01"
-                placeholder="0,00" 
-                value={form.amount} 
-                onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+                placeholder={form.type === 'expense' ? "Ex: Aluguel" : "Ex: Gestão de tráfego"}
+                value={form.description} 
+                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
               />
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label>Descrição</Label>
-            <Input 
-              placeholder="Ex: Aluguel, Venda de Produto..." 
-              value={form.description} 
-              onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2 flex flex-col">
-              <Label className="mb-1">Data</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="justify-start text-left font-normal">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.competence_date ? format(new Date(form.competence_date), "dd/MM/yyyy") : <span>Selecione</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={new Date(form.competence_date)}
-                    onSelect={(d) => d && setForm(f => ({ ...f, competence_date: iso(d) }))}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Valor</Label>
+                <Input type="number" step="0.01" placeholder="R$ 0,00" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Vencimento</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {form.competence_date ? format(new Date(form.competence_date), "dd/MM/yyyy") : <span>Selecione</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={new Date(form.competence_date)} onSelect={(d) => d && setForm(f => ({ ...f, competence_date: iso(d) }))} initialFocus /></PopoverContent>
+                </Popover>
+              </div>
             </div>
+
+            {form.type !== 'transfer' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{form.type === "income" ? "Cliente" : "Fornecedor"}</Label>
+                  <div className="flex gap-2">
+                    <Input placeholder="Nome..." value={form.person_name} onChange={e => setForm(f => ({ ...f, person_name: e.target.value }))} />
+                    <Button size="icon" variant="outline" className="shrink-0"><Plus className="size-4"/></Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Categoria</Label>
+                  <div className="flex gap-2">
+                    <Input placeholder="Categoria..." value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))} />
+                    <Button size="icon" variant="outline" className="shrink-0"><Plus className="size-4"/></Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={form.status} onValueChange={(v) => setForm(f => ({ ...f, status: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pendente</SelectItem>
-                  <SelectItem value="paid">{form.type === "income" ? "Recebido" : "Pago"}</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>{form.type === 'income' ? 'Conta de recebimento' : form.type === 'expense' ? 'Conta de pagamento' : 'Conta'}</Label>
+              <Input placeholder="Selecione conta..." value={form.account_id} onChange={e => setForm(f => ({ ...f, account_id: e.target.value }))} />
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Conta</Label>
-              <Select value={form.account_id} onValueChange={(v) => setForm(f => ({ ...f, account_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {meta?.accounts.map((a: any) => (
-                    <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="liq" checked={form.is_liquidated} onCheckedChange={(v) => setForm(f => ({ ...f, is_liquidated: !!v }))} />
+              <Label htmlFor="liq">{form.type === 'income' ? 'Já recebi este valor' : 'Já paguei esta despesa'}</Label>
             </div>
-            <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Select value={form.category_id} onValueChange={(v) => setForm(f => ({ ...f, category_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {meta?.categories.map((c: any) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>{form.type === "income" ? "Cliente" : "Fornecedor"}</Label>
-            <Input 
-              placeholder="Nome da pessoa ou empresa" 
-              value={form.person_name} 
-              onChange={e => setForm(f => ({ ...f, person_name: e.target.value }))}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Observações</Label>
-            <Input 
-              placeholder="Notas adicionais" 
-              value={form.notes} 
-              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-            />
+            
+            <Button variant="ghost" className="w-full justify-between" onClick={() => setShowAdvanced(!showAdvanced)}>
+              Mais opções {showAdvanced ? <ChevronDown className="rotate-180" /> : <ChevronDown />}
+            </Button>
+            
+            {showAdvanced && (
+              <div className="p-4 border rounded-lg bg-slate-50 space-y-4">
+                <p className="text-xs text-muted-foreground">Funcionalidades avançadas (Competência, Centro de custo, Recorrência, etc.) seriam expandidas aqui.</p>
+              </div>
+            )}
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button 
-            disabled={save.isPending || !form.amount || !form.description}
-            onClick={() => save.mutate()}
-          >
+          <Button disabled={save.isPending} onClick={() => save.mutate()}>
             {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isEdit ? "Salvar alterações" : "Criar lançamento"}
           </Button>
