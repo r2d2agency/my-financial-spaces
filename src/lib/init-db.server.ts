@@ -407,6 +407,9 @@ export async function initializeDatabase() {
           UNIQUE (workspace_id, category_id, period_month, period_year)
         );
 
+        -- Flag de troca obrigatória de senha (superadmin semeado)
+        ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT false;
+
         -- Promover tnicodemos@gmail.com a platform_admin
         DO $$ 
         DECLARE 
