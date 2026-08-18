@@ -210,6 +210,7 @@ function Cartoes() {
                   <div className="flex justify-center">
                     <Link 
                       to="/movimentacoes" 
+                      search={{ account_id: undefined }}
                       className="text-[10px] text-muted-foreground hover:text-primary transition-colors underline underline-offset-4"
                     >
                       Ver lançamentos deste cartão
