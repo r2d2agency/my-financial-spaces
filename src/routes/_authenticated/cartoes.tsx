@@ -292,6 +292,51 @@ function Cartoes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={openPay} onOpenChange={setOpenPay}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle>Pagar Fatura - {selectedCard?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="p-4 bg-primary/5 rounded-lg border border-primary/10 space-y-1">
+              <span className="text-xs text-muted-foreground uppercase font-bold">Valor em Aberto</span>
+              <p className="text-2xl font-bold text-primary">{money(payForm.amount)}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Data do Pagamento</Label>
+              <Input type="date" value={payForm.date} onChange={e => setPayForm(p => ({ ...p, date: e.target.value }))} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Conta de Origem</Label>
+              <select 
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={payForm.account_id}
+                onChange={e => setPayForm(p => ({ ...p, account_id: e.target.value }))}
+              >
+                <option value="">Selecione...</option>
+                {meta?.accounts.map((a: any) => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Valor do Pagamento</Label>
+              <Input type="number" step="0.01" value={payForm.amount} onChange={e => setPayForm(p => ({ ...p, amount: num(e.target.value) }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenPay(false)}>Cancelar</Button>
+            <Button disabled={!payForm.account_id || payBill.isPending} onClick={() => payBill.mutate()}>
+              {payBill.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirmar Pagamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
