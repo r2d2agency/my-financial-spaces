@@ -228,10 +228,16 @@ export async function initializeDatabase() {
           kind public.account_kind NOT NULL DEFAULT 'checking',
           institution TEXT,
           initial_balance NUMERIC(14,2) NOT NULL DEFAULT 0,
+          initial_balance_date DATE NOT NULL DEFAULT CURRENT_DATE,
           archived BOOLEAN NOT NULL DEFAULT false,
+          is_default BOOLEAN NOT NULL DEFAULT false,
           created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
           updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
+
+        -- Garantir colunas novas se a tabela já existir
+        ALTER TABLE public.financial_accounts ADD COLUMN IF NOT EXISTS initial_balance_date DATE NOT NULL DEFAULT CURRENT_DATE;
+        ALTER TABLE public.financial_accounts ADD COLUMN IF NOT EXISTS is_default BOOLEAN NOT NULL DEFAULT false;
 
         CREATE TABLE IF NOT EXISTS public.credit_cards (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
