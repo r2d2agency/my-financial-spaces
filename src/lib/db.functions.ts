@@ -393,6 +393,228 @@ export const dbQuery = createServerFn({ method: "POST" })
 
           return { success: true };
         }
+        if (data.rpcName === "get_dashboard_summary") {
+          const { workspace_id, month, year } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+
+          const startDate = new Date(year, month - 1, 1);
+          const endDate = new Date(year, month, 0);
+          const prevMonthStart = new Date(year, month - 2, 1);
+          const prevMonthEnd = new Date(year, month - 1, 0);
+
+          const isoStart = startDate.toISOString().split('T')[0];
+          const isoEnd = endDate.toISOString().split('T')[0];
+          const isoPrevStart = prevMonthStart.toISOString().split('T')[0];
+          const isoPrevEnd = prevMonthEnd.toISOString().split('T')[0];
+
+          // 1. Saldo Atual (Total de todas as contas ativas)
+          const accounts = await query(
+            "SELECT id, name, initial_balance, initial_balance_date FROM public.financial_accounts WHERE workspace_id = $1 AND archived = false",
+            [workspace_id]
+          );
+
+          let totalBalance = 0;
+          const accountSummaries = [];
+
+          for (const acc of accounts.rows) {
+            const trans = await query(
+              `SELECT COALESCE(SUM(amount), 0) as total 
+               FROM public.transactions 
+               WHERE account_id = $1 AND workspace_id = $2 AND status = 'paid'
+                 AND (paid_date >= $3 OR paid_date IS NULL AND competence_date >= $3)`,
+              [acc.id, workspace_id, acc.initial_balance_date]
+            );
+            const current = parseFloat(acc.initial_balance) + parseFloat(trans.rows[0].total);
+            totalBalance += current;
+            accountSummaries.push({ id: acc.id, name: acc.name, balance: current });
+          }
+
+          // 2. Indicadores do Mês (Entradas, Saídas, A Receber, A Pagar)
+          const currentIndicators = await query(
+            `SELECT 
+              COALESCE(SUM(CASE WHEN type IN ('income', 'extra_income') AND status = 'paid' THEN amount ELSE 0 END), 0) as income,
+              COALESCE(SUM(CASE WHEN type IN ('expense', 'fixed_expense') AND status = 'paid' THEN amount ELSE 0 END), 0) as expense,
+              COALESCE(SUM(CASE WHEN type IN ('income', 'extra_income') AND status = 'pending' THEN amount ELSE 0 END), 0) as to_receive,
+              COALESCE(SUM(CASE WHEN type IN ('expense', 'fixed_expense') AND status = 'pending' THEN amount ELSE 0 END), 0) as to_pay
+             FROM public.transactions 
+             WHERE workspace_id = $1 AND competence_date BETWEEN $2 AND $3`,
+            [workspace_id, isoStart, isoEnd]
+          );
+
+          // 3. Indicadores do Mês Anterior (para comparação)
+          const prevIndicators = await query(
+            `SELECT 
+              COALESCE(SUM(CASE WHEN type IN ('income', 'extra_income') AND status = 'paid' THEN amount ELSE 0 END), 0) as income,
+              COALESCE(SUM(CASE WHEN type IN ('expense', 'fixed_expense') AND status = 'paid' THEN amount ELSE 0 END), 0) as expense
+             FROM public.transactions 
+             WHERE workspace_id = $1 AND competence_date BETWEEN $2 AND $3`,
+            [workspace_id, isoPrevStart, isoPrevEnd]
+          );
+
+          // 4. Alertas (Atrasados e Vencendo)
+          const today = new Date().toISOString().split('T')[0];
+          const alerts = await query(
+            `SELECT 
+              COUNT(CASE WHEN status = 'pending' AND due_date < $2 THEN 1 END) as overdue_count,
+              COALESCE(SUM(CASE WHEN status = 'pending' AND due_date < $2 THEN ABS(amount) ELSE 0 END), 0) as overdue_amount,
+              COUNT(CASE WHEN status = 'pending' AND type IN ('expense', 'fixed_expense') AND due_date BETWEEN $2 AND (CURRENT_DATE + interval '7 days') THEN 1 END) as soon_count
+             FROM public.transactions 
+             WHERE workspace_id = $1`,
+            [workspace_id, today]
+          );
+
+          // 5. Próximos Compromissos (7 dias)
+          const upcoming = await query(
+            `SELECT id, description, amount, type, due_date, status
+             FROM public.transactions 
+             WHERE workspace_id = $1 AND status = 'pending' AND due_date >= $2
+             ORDER BY due_date ASC LIMIT 10`,
+            [workspace_id, today]
+          );
+
+          // 6. Cartões
+          const cards = await query(
+            "SELECT id, name, credit_limit FROM public.credit_cards WHERE workspace_id = $1 AND archived = false",
+            [workspace_id]
+          );
+          const cardSummaries = [];
+          for (const card of cards.rows) {
+            const used = await query(
+              "SELECT COALESCE(SUM(ABS(amount)), 0) as total FROM public.transactions WHERE card_id = $1 AND workspace_id = $2 AND status = 'pending'",
+              [card.id, workspace_id]
+            );
+            // Próxima fatura
+            const invoice = await query(
+              "SELECT id, period_month, period_year, due_date, status FROM public.credit_card_invoices WHERE card_id = $1 AND workspace_id = $2 AND status = 'open' ORDER BY due_date ASC LIMIT 1",
+              [card.id, workspace_id]
+            );
+            
+            cardSummaries.push({
+              id: card.id,
+              name: card.name,
+              limit: parseFloat(card.credit_limit),
+              used: parseFloat(used.rows[0].total),
+              next_invoice: invoice.rows[0] || null
+            });
+          }
+
+          // 7. Maiores gastos (Categorias)
+          const categories = await query(
+            `SELECT c.name, COALESCE(SUM(ABS(t.amount)), 0) as total
+             FROM public.transactions t
+             JOIN public.categories c ON t.category_id = c.id
+             WHERE t.workspace_id = $1 AND t.type IN ('expense', 'fixed_expense') AND t.status = 'paid'
+               AND t.competence_date BETWEEN $2 AND $3
+             GROUP BY c.name ORDER BY total DESC LIMIT 5`,
+            [workspace_id, isoStart, isoEnd]
+          );
+
+          return {
+            summary: {
+              total_balance: totalBalance,
+              income: parseFloat(currentIndicators.rows[0].income),
+              expense: parseFloat(currentIndicators.rows[0].expense),
+              result: parseFloat(currentIndicators.rows[0].income) - parseFloat(currentIndicators.rows[0].expense),
+              to_receive: parseFloat(currentIndicators.rows[0].to_receive),
+              to_pay: parseFloat(currentIndicators.rows[0].to_pay),
+              prev_income: parseFloat(prevIndicators.rows[0].income),
+              prev_expense: parseFloat(prevIndicators.rows[0].expense),
+            },
+            alerts: {
+              overdue_count: parseInt(alerts.rows[0].overdue_count),
+              overdue_amount: parseFloat(alerts.rows[0].overdue_amount),
+              soon_count: parseInt(alerts.rows[0].soon_count),
+            },
+            accounts: accountSummaries,
+            cards: cardSummaries,
+            upcoming: upcoming.rows,
+            top_categories: categories.rows
+          };
+        }
+
+        if (data.rpcName === "get_dashboard_cash_flow") {
+          const { workspace_id, period_months = 6 } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+
+          // 1. Dados Realizados (últimos 6 meses)
+          const flowData = [];
+          for (let i = period_months - 1; i >= 0; i--) {
+            const d = new Date();
+            d.setMonth(d.getMonth() - i);
+            const m = d.getMonth() + 1;
+            const y = d.getFullYear();
+            const start = new Date(y, m - 1, 1).toISOString().split('T')[0];
+            const end = new Date(y, m, 0).toISOString().split('T')[0];
+
+            const res = await query(
+              `SELECT 
+                COALESCE(SUM(CASE WHEN type IN ('income', 'extra_income') AND status = 'paid' THEN amount ELSE 0 END), 0) as income,
+                COALESCE(SUM(CASE WHEN type IN ('expense', 'fixed_expense') AND status = 'paid' THEN amount ELSE 0 END), 0) as expense
+               FROM public.transactions 
+               WHERE workspace_id = $1 AND competence_date BETWEEN $2 AND $3`,
+              [workspace_id, start, end]
+            );
+
+            flowData.push({
+              month: d.toLocaleString('pt-BR', { month: 'short' }),
+              income: parseFloat(res.rows[0].income),
+              expense: parseFloat(res.rows[0].expense),
+              result: parseFloat(res.rows[0].income) - parseFloat(res.rows[0].expense)
+            });
+          }
+
+          // 2. Projeção de Saldo (Próximos 90 dias em intervalos de 7, 30, 60, 90)
+          const accounts = await query(
+            "SELECT id, initial_balance, initial_balance_date FROM public.financial_accounts WHERE workspace_id = $1 AND archived = false",
+            [workspace_id]
+          );
+          
+          let currentTotal = 0;
+          for (const acc of accounts.rows) {
+            const trans = await query(
+              `SELECT COALESCE(SUM(amount), 0) as total 
+               FROM public.transactions 
+               WHERE account_id = $1 AND workspace_id = $2 AND status = 'paid'
+                 AND (paid_date >= $3 OR paid_date IS NULL AND competence_date >= $3)`,
+              [acc.id, workspace_id, acc.initial_balance_date]
+            );
+            currentTotal += parseFloat(acc.initial_balance) + parseFloat(trans.rows[0].total);
+          }
+
+          const projections = [];
+          const projectionDays = [7, 30, 60, 90];
+          
+          for (const days of projectionDays) {
+            const targetDate = new Date();
+            targetDate.setDate(targetDate.getDate() + days);
+            const isoTarget = targetDate.toISOString().split('T')[0];
+            const isoToday = new Date().toISOString().split('T')[0];
+
+            // Considerar transações PENDENTES até a data alvo
+            // Cuidado: não duplicar cartão. Usamos apenas transações vinculadas a contas bancárias.
+            // As faturas de cartão são pendentes e vinculadas ao cartão, mas o pagamento da fatura será uma transação 'card_payment' vinculada a uma conta.
+            const pending = await query(
+              `SELECT COALESCE(SUM(amount), 0) as total 
+               FROM public.transactions 
+               WHERE workspace_id = $1 AND status = 'pending' 
+                 AND due_date BETWEEN $2 AND $3
+                 AND account_id IS NOT NULL`,
+              [workspace_id, isoToday, isoTarget]
+            );
+
+            projections.push({
+              days,
+              date: isoTarget,
+              estimated_balance: currentTotal + parseFloat(pending.rows[0].total)
+            });
+          }
+
+          return {
+            history: flowData,
+            projections,
+            current_balance: currentTotal
+          };
+        }
       } catch (rpcErr) {
         console.error(`RPC Error (${data.rpcName}):`, rpcErr);
         if (rpcErr instanceof Error) {
