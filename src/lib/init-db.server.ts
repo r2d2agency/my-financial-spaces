@@ -283,6 +283,7 @@ export async function initializeDatabase() {
           account_id UUID REFERENCES public.financial_accounts(id) ON DELETE SET NULL,
           to_account_id UUID REFERENCES public.financial_accounts(id) ON DELETE SET NULL,
           card_id UUID REFERENCES public.credit_cards(id) ON DELETE SET NULL,
+          invoice_id UUID REFERENCES public.credit_card_invoices(id) ON DELETE SET NULL,
           category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
           created_by UUID NOT NULL,
           created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
