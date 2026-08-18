@@ -50,7 +50,10 @@ export const signIn = createServerFn({ method: "POST" })
       .parse(data)
   )
   .handler(async ({ data }) => {
-    const res = await query("SELECT id, password_hash FROM auth.users WHERE email = $1", [data.email]);
+    const res = await query(
+      "SELECT id, password_hash, must_change_password FROM auth.users WHERE email = $1",
+      [data.email]
+    );
     const user = res.rows[0];
     
     if (!user) {
@@ -64,7 +67,7 @@ export const signIn = createServerFn({ method: "POST" })
     }
 
     const sessionId = await createSession(user.id);
-    return { sessionId };
+    return { sessionId, mustChangePassword: user.must_change_password === true };
   });
 
 /** Verifica se o usuário logado precisa definir uma nova senha (superadmin semeado). */
