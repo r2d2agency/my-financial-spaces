@@ -178,7 +178,7 @@ function Movimentacoes() {
                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
                            <span>{new Date(t.competence_date).toLocaleDateString("pt-BR")}</span>
                            <span>•</span>
-                           <span>{t.accounts?.name || t.credit_cards?.name || 'Sem conta'}</span>
+                           <span>{accountName(t)}</span>
                            <StatusBadge tx={t} />
                          </div>
                        </div>
