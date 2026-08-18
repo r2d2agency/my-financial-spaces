@@ -98,6 +98,8 @@ function Movimentacoes() {
     enabled: !!wsId,
     queryFn: async () => {
       const searchParams = Route.useSearch();
+      console.log("Fetching transactions for workspace:", wsId, "range:", startIso, "to", endIso);
+      
       let query = db.from("transactions")
         .select("*, accounts(name), credit_cards(name)")
         .eq("workspace_id", wsId!)
@@ -112,7 +114,12 @@ function Movimentacoes() {
       if (searchParams.account_id && searchParams.account_id !== 'undefined') query = query.eq("account_id", searchParams.account_id);
       if (searchParams.card_id && searchParams.card_id !== 'undefined') query = query.eq("card_id", searchParams.card_id);
       
-      const { data } = await query.execute();
+      const { data, error } = await query.execute();
+      if (error) {
+        console.error("Error fetching transactions:", error);
+        toast.error("Erro ao carregar movimentações");
+        throw error;
+      }
       return Array.isArray(data) ? data : [];
     },
   });
@@ -150,18 +157,56 @@ function Movimentacoes() {
       <TransactionSummary {...stats} hideBalances={hideBalances} />
 
       <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
-        {isLoading ? <Skeleton className="h-40 w-full" /> : (
-          <div className="bg-white border rounded-xl shadow-sm">
-             {/* Listagem simplificada para fins de demonstração da nova UI */}
-             {rows?.map((t: any) => (
-                <div key={t.id} className="p-4 border-b flex justify-between items-center hover:bg-slate-50 cursor-pointer" onClick={() => { setEditingTx(t); setIsFormOpen(true); }}>
-                   <div>
-                     <p className="font-semibold">{t.description}</p>
-                     <p className="text-xs text-muted-foreground">{new Date(t.competence_date).toLocaleDateString("pt-BR")}</p>
-                   </div>
-                   <div className="font-bold">{brl(t.amount)}</div>
-                </div>
-             ))}
+        {isLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </div>
+        ) : (
+          <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+             {rows && rows.length > 0 ? (
+               rows.map((t: any) => (
+                  <div key={t.id} className="p-4 border-b last:border-0 flex justify-between items-center hover:bg-slate-50 cursor-pointer transition-colors" onClick={() => { setEditingTx(t); setIsFormOpen(true); }}>
+                     <div className="flex items-center gap-3">
+                       <div className={cn(
+                         "p-2 rounded-full",
+                         isIncomeType(t.type) ? "bg-emerald-50" : t.type === 'transfer' ? "bg-blue-50" : "bg-rose-50"
+                       )}>
+                         <TxIcon type={t.type} />
+                       </div>
+                       <div>
+                         <p className="font-semibold text-slate-900">{t.description}</p>
+                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                           <span>{new Date(t.competence_date).toLocaleDateString("pt-BR")}</span>
+                           <span>•</span>
+                           <span>{t.accounts?.name || t.credit_cards?.name || 'Sem conta'}</span>
+                           <StatusBadge tx={t} />
+                         </div>
+                       </div>
+                     </div>
+                     <div className={cn(
+                       "font-bold text-right",
+                       isIncomeType(t.type) ? "text-emerald-600" : "text-slate-900"
+                     )}>
+                       {isIncomeType(t.type) ? "+" : "-"}{brl(Math.abs(t.amount))}
+                     </div>
+                  </div>
+               ))
+             ) : (
+               <div className="p-12 text-center">
+                 <div className="bg-slate-50 size-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                   <CalendarDays className="size-8 text-slate-300" />
+                 </div>
+                 <h3 className="text-lg font-medium text-slate-900">Nenhuma movimentação</h3>
+                 <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">
+                   Não encontramos registros para os filtros selecionados neste período.
+                 </p>
+                 <Button variant="outline" className="mt-6" onClick={() => { setRef(new Date()); setTab("all"); setStatusFilter("all"); }}>
+                   Limpar filtros
+                 </Button>
+               </div>
+             )}
           </div>
         )}
       </div>
