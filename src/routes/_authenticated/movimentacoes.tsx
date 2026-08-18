@@ -31,6 +31,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/_authenticated/movimentacoes")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    account_id: (search['account_id'] as string) || undefined,
+  }),
   component: Movimentacoes,
 });
 

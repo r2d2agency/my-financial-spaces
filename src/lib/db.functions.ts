@@ -211,32 +211,47 @@ export const dbQuery = createServerFn({ method: "POST" })
           // Validar acesso ao workspace
           await verifyAuth(workspace_id);
 
-          // Validar se ambas as contas pertencem ao workspace
+          if (from_account_id === to_account_id) {
+            throw new Error("As contas de origem e destino devem ser diferentes.");
+          }
+
+          if (parseFloat(amount) <= 0) {
+            throw new Error("O valor da transferência deve ser maior que zero.");
+          }
+
+          // Validar se ambas as contas pertencem ao workspace e não estão arquivadas
           const accountsCheck = await query(
-            "SELECT id FROM public.financial_accounts WHERE id IN ($1, $2) AND workspace_id = $3",
+            "SELECT id FROM public.financial_accounts WHERE id IN ($1, $2) AND workspace_id = $3 AND archived = false",
             [from_account_id, to_account_id, workspace_id]
           );
           if (accountsCheck.rows.length !== 2) {
-            throw new Error("Uma ou ambas as contas não pertencem a este espaço.");
+            throw new Error("Uma ou ambas as contas são inválidas ou estão arquivadas.");
           }
 
           const transfer_id = crypto.randomUUID();
           
-          // Lado da Saída
-          await query(
-            `INSERT INTO public.transactions (workspace_id, type, description, amount, status, competence_date, account_id, created_by, transfer_id) 
-             VALUES ($1, 'transfer', $2, $3, 'paid', $4, $5, $6, $7)`,
-            [workspace_id, description, -Math.abs(amount), date, from_account_id, userId, transfer_id]
-          );
+          // Usar transação atômica (BEGIN/COMMIT é implícito na query single string ou via Pool client)
+          // Aqui simulamos via multiplas queries, idealmente seria via client.query('BEGIN')
+          try {
+            // Lado da Saída
+            await query(
+              `INSERT INTO public.transactions (workspace_id, type, description, amount, status, competence_date, paid_date, account_id, created_by, transfer_id) 
+               VALUES ($1, 'transfer', $2, $3, 'paid', $4, $4, $5, $6, $7)`,
+              [workspace_id, description || 'Transferência enviada', -Math.abs(amount), date, from_account_id, userId, transfer_id]
+            );
 
-          // Lado da Entrada
-          await query(
-            `INSERT INTO public.transactions (workspace_id, type, description, amount, status, competence_date, account_id, created_by, transfer_id) 
-             VALUES ($1, 'transfer', $2, $3, 'paid', $4, $5, $6, $7)`,
-            [workspace_id, description, Math.abs(amount), date, to_account_id, userId, transfer_id]
-          );
-          
-          return { success: true, transfer_id };
+            // Lado da Entrada
+            await query(
+              `INSERT INTO public.transactions (workspace_id, type, description, amount, status, competence_date, paid_date, account_id, created_by, transfer_id) 
+               VALUES ($1, 'transfer', $2, $3, 'paid', $4, $4, $5, $6, $7)`,
+              [workspace_id, description || 'Transferência recebida', Math.abs(amount), date, to_account_id, userId, transfer_id]
+            );
+            
+            return { success: true, transfer_id };
+          } catch (err) {
+            console.error("Transfer error:", err);
+            throw new Error("Falha ao executar transferência no banco de dados.");
+          }
         }
         // Sprint B: Salvar Planejamento
         if (data.rpcName === "save_budget") {
@@ -284,6 +299,35 @@ export const dbQuery = createServerFn({ method: "POST" })
             [userId, id, workspace_id]
           );
           return res.rows[0];
+        }
+        if (data.rpcName === "get_account_balance") {
+          const { account_id, workspace_id } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+          
+          // Buscar saldo inicial
+          const acc = await query(
+            "SELECT initial_balance, initial_balance_date FROM public.financial_accounts WHERE id = $1 AND workspace_id = $2",
+            [account_id, workspace_id]
+          );
+          if (acc.rows.length === 0) throw new Error("Conta não encontrada");
+          
+          const initialBalance = parseFloat(acc.rows[0].initial_balance);
+          const initialDate = acc.rows[0].initial_balance_date;
+
+          // Somar transações PAGAS (receitas, despesas, transferências) após a data inicial
+          // Incluímos a data inicial como ponto de partida das movimentações extras
+          const trans = await query(
+            `SELECT COALESCE(SUM(amount), 0) as total 
+             FROM public.transactions 
+             WHERE account_id = $1 
+               AND workspace_id = $2 
+               AND status = 'paid'
+               AND (paid_date >= $3 OR paid_date IS NULL AND competence_date >= $3)`,
+            [account_id, workspace_id, initialDate]
+          );
+
+          const currentBalance = initialBalance + parseFloat(trans.rows[0].total);
+          return { current_balance: currentBalance };
         }
       } catch (rpcErr) {
         console.error(`RPC Error (${data.rpcName}):`, rpcErr);

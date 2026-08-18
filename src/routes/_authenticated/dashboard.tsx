@@ -112,7 +112,7 @@ function Dashboard() {
           <p className="text-sm capitalize text-muted-foreground">{monthLabel(now)}</p>
         </div>
         <Button asChild>
-          <Link to="/movimentacoes">Nova movimentação</Link>
+          <Link to="/movimentacoes" search={{ account_id: undefined }}>Nova movimentação</Link>
         </Button>
       </div>
 
