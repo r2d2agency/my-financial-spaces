@@ -155,7 +155,13 @@ function Movimentacoes() {
       <TransactionSummary {...stats} hideBalances={hideBalances} />
 
       <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
-        {isLoading ? (
+        {error ? (
+          <div className="bg-white border rounded-xl p-8 text-center space-y-3">
+            <h3 className="text-lg font-medium text-slate-900">Não foi possível carregar</h3>
+            <p className="text-sm text-muted-foreground">{(error as Error).message}</p>
+            <Button variant="outline" onClick={() => refetch()}>Tentar novamente</Button>
+          </div>
+        ) : isLoading ? (
           <div className="space-y-3">
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-16 w-full" />
