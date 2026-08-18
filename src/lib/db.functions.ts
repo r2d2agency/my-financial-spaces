@@ -17,15 +17,16 @@ const verifyAuth = async (workspaceId?: string) => {
   // Se workspaceId for fornecido, validar acesso
   if (workspaceId) {
     const access = await query(
-      "SELECT 1 FROM public.workspace_members WHERE workspace_id = $1 AND user_id = $2",
+      "SELECT role FROM public.workspace_members WHERE workspace_id = $1 AND user_id = $2",
       [workspaceId, userId]
     );
     if (access.rows.length === 0) {
       throw new Error("Acesso negado a este espaço financeiro.");
     }
+    return { userId, role: access.rows[0].role };
   }
 
-  return userId;
+  return { userId, role: null };
 };
 
 export const dbQuery = createServerFn({ method: "POST" })
@@ -46,7 +47,15 @@ export const dbQuery = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const filters: any = data.filters || {};
     const workspaceId = filters.workspace_id || (data.data?.workspace_id);
-    const userId = await verifyAuth(workspaceId);
+    const { userId, role } = await verifyAuth(workspaceId);
+    
+    // Bloquear ações de escrita para VIEWER
+    if (role === 'viewer' && (data.action === 'insert' || data.action === 'update' || data.action === 'delete' || data.action === 'rpc')) {
+      const allowedRPCs = ['list_ws_members'];
+      if (!(data.action === 'rpc' && allowedRPCs.includes(data.rpcName || ''))) {
+        throw new Error("Sua permissão é de visualizador e não permite alterações.");
+      }
+    }
     
     if (data.action === "select") {
       let sql = `SELECT ${data.columns || "*"} FROM ${data.table}`;
