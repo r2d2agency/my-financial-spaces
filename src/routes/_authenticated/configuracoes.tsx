@@ -4,7 +4,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { db } from "@/lib/db-browser";
 import { useWorkspace } from "@/lib/workspace";
-import { ROLES, brl, num } from "@/lib/finance";
+import { ROLES, brl, num, type Role } from "@/lib/finance";
+import { inviteMember, removeMember, updateMemberRole, cancelInvite } from "@/lib/workspace.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,21 +34,31 @@ function Configuracoes() {
   const qc = useQueryClient();
   const [name, setName] = useState(current?.workspaces?.name ?? "");
   const [income, setIncome] = useState(String(current?.workspaces?.expected_income ?? ""));
-  const [invite, setInvite] = useState({ email: "", role: "editor", hide_balances: false });
+  const [invite, setInvite] = useState({ email: "", role: "viewer" as Role });
   const [openaiKey, setOpenaiKey] = useState("");
+  
   const getUser = useServerFn(getCurrentUser);
+  const doInvite = useServerFn(inviteMember);
+  const doRemove = useServerFn(removeMember);
+  const doUpdateRole = useServerFn(updateMemberRole);
+  const doCancelInvite = useServerFn(cancelInvite);
 
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["settings", wsId],
     enabled: !!wsId,
     queryFn: async () => {
       const [members, invites, sub] = await Promise.all([
         db.rpc("list_ws_members", { _ws: wsId! }),
-        db.from("workspace_invites").select("id, email, role, status").eq("workspace_id", wsId!).execute(),
+        db.from("workspace_invites").select("*").eq("workspace_id", wsId!).execute(),
         db.from("subscriptions").select("status, current_period_end, plans(name, price_cents)").eq("workspace_id", wsId!).maybeSingle(),
       ]);
       const { data: config } = await db.from("platform_configs").select("value").eq("key", "openai_api_key").maybeSingle();
-      return { members: members.data ?? [], invites: invites.data ?? [], sub: sub.data, openaiKey: config?.value ?? "" };
+      return { 
+        members: members.data ?? [], 
+        invites: (invites.data ?? []).filter((i: any) => i.status === 'pending'), 
+        sub: sub.data, 
+        openaiKey: config?.value ?? "" 
+      };
     },
   });
 
@@ -107,20 +118,46 @@ function Configuracoes() {
 
   const sendInvite = useMutation({
     mutationFn: async () => {
-      const me = await getUser({});
-      const { error } = await db.from("workspace_invites").insert({
-        workspace_id: wsId!,
-        email: invite.email.trim().toLowerCase(),
-        role: invite.role as never,
-        hide_balances: invite.hide_balances,
-        invited_by: me?.id,
+      await doInvite({ 
+        data: { 
+          workspaceId: wsId!, 
+          email: invite.email, 
+          role: invite.role as any 
+        } 
       });
-      if (error) throw error;
     },
+    onSuccess: (res: any) => {
+      toast.success(res?.type === 'membership' ? "Membro adicionado!" : "Convite enviado!");
+      setInvite({ email: "", role: "viewer" });
+      qc.invalidateQueries({ queryKey: ["settings"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const removeM = useMutation({
+    mutationFn: (userId: string) => doRemove({ data: { workspaceId: wsId!, userId } }),
     onSuccess: () => {
-      toast.success("Convite registrado. O acesso é liberado quando a pessoa criar a conta com esse e-mail.");
-      setInvite({ email: "", role: "editor", hide_balances: false });
-      qc.invalidateQueries();
+      toast.success("Membro removido.");
+      qc.invalidateQueries({ queryKey: ["settings"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateR = useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: Role }) => 
+      doUpdateRole({ data: { workspaceId: wsId!, userId, role: role as any } }),
+    onSuccess: () => {
+      toast.success("Permissão atualizada.");
+      qc.invalidateQueries({ queryKey: ["settings"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const cancelI = useMutation({
+    mutationFn: (inviteId: string) => doCancelInvite({ data: { workspaceId: wsId!, inviteId } }),
+    onSuccess: () => {
+      toast.success("Convite cancelado.");
+      qc.invalidateQueries({ queryKey: ["settings"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -153,56 +190,136 @@ function Configuracoes() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Equipe</CardTitle>
-          <CardDescription>Papéis e permissões de cada pessoa.</CardDescription>
+          <CardTitle className="text-base text-primary">Membros e acessos</CardTitle>
+          <CardDescription>Gerencie quem pode visualizar e operar este espaço.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {(data?.members ?? []).map((m: any) => (
-            <div key={m.user_id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2 text-sm">
-              <div>
-                <p className="font-medium text-foreground">{m.full_name || m.email}</p>
-                <p className="text-xs text-muted-foreground">{m.email}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="capitalize">{m.role}</Badge>
-                {m.hide_balances && <Badge variant="outline">saldos ocultos</Badge>}
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider">Membros Ativos</h3>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {(data?.members ?? []).map((m: any) => (
+                <div key={m.user_id} className="flex flex-col gap-3 rounded-lg border border-border p-4 bg-card shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-semibold text-foreground line-clamp-1">{m.full_name || m.email}</p>
+                      <p className="text-xs text-muted-foreground truncate">{m.email}</p>
+                    </div>
+                    <Badge variant={m.role === 'owner' ? 'default' : 'secondary'} className="capitalize shrink-0">
+                      {ROLES.find(r => r.value === m.role)?.label || m.role}
+                    </Badge>
+                  </div>
+                  
+                  {canManage && m.role !== 'owner' && (
+                    <div className="flex items-center gap-2 mt-auto pt-2 border-t border-border/50">
+                      <Select 
+                        value={m.role} 
+                        onValueChange={(v) => updateR.mutate({ userId: m.user_id, role: v as Role })}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ROLES.filter(r => r.value !== 'owner').map(r => (
+                            <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => {
+                          if (confirm(`Remover acesso de ${m.full_name || m.email}?`)) {
+                            removeM.mutate(m.user_id);
+                          }
+                        }}
+                      >
+                        Remover
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {(data?.invites?.length ?? 0) > 0 && (
+            <div className="space-y-4 pt-4 border-t border-border">
+              <h3 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider">Convites Pendentes</h3>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {data?.invites.map((i: any) => (
+                  <div key={i.id} className="flex flex-col gap-3 rounded-lg border border-dashed border-border p-4 bg-muted/20">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium text-foreground truncate">{i.email}</p>
+                        <p className="text-[10px] text-muted-foreground">Expira em {new Date(i.expires_at).toLocaleDateString()}</p>
+                      </div>
+                      <Badge variant="outline" className="capitalize shrink-0">
+                        {ROLES.find(r => r.value === i.role)?.label || i.role}
+                      </Badge>
+                    </div>
+                    {canManage && (
+                      <div className="flex items-center gap-2 mt-auto pt-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 text-xs"
+                          onClick={() => {
+                            const url = `${window.location.origin}/invite/${i.token}`;
+                            navigator.clipboard.writeText(url);
+                            toast.success("Link do convite copiado!");
+                          }}
+                        >
+                          Copiar Link
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => cancelI.mutate(i.id)}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
-          {(data?.invites ?? []).filter((i: any) => i.status === "pending").map((i: any) => (
-            <div key={i.id} className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>{i.email}</span>
-              <Badge variant="outline">convite pendente · {i.role}</Badge>
-            </div>
-          ))}
+          )}
 
           {canManage && (
-            <div className="grid gap-3 pt-2 sm:grid-cols-4">
-              <Input
-                className="sm:col-span-2"
-                placeholder="email@exemplo.com"
-                value={invite.email}
-                onChange={(e) => setInvite((p) => ({ ...p, email: e.target.value }))}
-              />
-              <Select value={invite.role} onValueChange={(v) => setInvite((p) => ({ ...p, role: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {ROLES.filter((r) => r.value !== "owner").map((r) => (
-                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button onClick={() => sendInvite.mutate()} disabled={!invite.email || sendInvite.isPending}>
-                Convidar
-              </Button>
-              <label className="flex items-center gap-2 text-sm text-muted-foreground sm:col-span-4">
-                <input
-                  type="checkbox"
-                  checked={invite.hide_balances}
-                  onChange={(e) => setInvite((p) => ({ ...p, hide_balances: e.target.checked }))}
+            <div className="pt-6 border-t border-border">
+              <h3 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider mb-4">+ Adicionar membro</h3>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Input
+                  className="flex-1"
+                  placeholder="usuario@email.com"
+                  type="email"
+                  value={invite.email}
+                  onChange={(e) => setInvite((p) => ({ ...p, email: e.target.value }))}
                 />
-                Ocultar saldos para esta pessoa (pode lançar, não vê saldo)
-              </label>
+                <Select 
+                  value={invite.role} 
+                  onValueChange={(v) => setInvite((p) => ({ ...p, role: v as Role }))}
+                >
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Permissão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLES.filter((r) => r.value !== "owner").map((r) => (
+                      <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  onClick={() => sendInvite.mutate()} 
+                  disabled={!invite.email || sendInvite.isPending}
+                  className="w-full sm:w-auto"
+                >
+                  {sendInvite.isPending ? "Enviando..." : "Enviar convite"}
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

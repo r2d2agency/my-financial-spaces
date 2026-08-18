@@ -12,7 +12,10 @@ import { signUp as localSignUp, signIn as localSignIn, changePassword } from "@/
 import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/auth")({
-  validateSearch: z.object({ mode: z.enum(["login", "signup"]).optional() }),
+  validateSearch: z.object({ 
+    mode: z.enum(["login", "signup"]).optional(),
+    redirect: z.string().optional()
+  }),
   component: AuthPage,
   head: () => ({
     meta: [
@@ -27,7 +30,7 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthPage() {
-  const { mode } = Route.useSearch();
+  const { mode, redirect: redirectPath } = Route.useSearch();
   const navigate = useNavigate();
   const [signup, setSignup] = useState(mode === "signup");
   const [email, setEmail] = useState("");
@@ -55,7 +58,7 @@ function AuthPage() {
       if (signup) {
         const result = await doSignUp({ data: { email, password, name } });
         localStorage.setItem("auth_token", result.sessionId);
-        navigate({ to: "/onboarding", replace: true });
+        navigate({ to: redirectPath || "/onboarding", replace: true });
       } else {
         const result = await doSignIn({ data: { email, password } });
         if (result.mustChangePassword) {
@@ -66,7 +69,7 @@ function AuthPage() {
           toast.info("Defina uma nova senha para continuar.");
         } else {
           localStorage.setItem("auth_token", result.sessionId);
-          navigate({ to: "/dashboard", replace: true });
+          navigate({ to: redirectPath || "/dashboard", replace: true });
         }
       }
     } catch (err) {
@@ -87,7 +90,7 @@ function AuthPage() {
       await doChangePassword({ data: { sessionId: resetToken!, newPassword } });
       localStorage.setItem("auth_token", resetToken!);
       toast.success("Senha atualizada com sucesso!");
-      navigate({ to: "/dashboard", replace: true });
+      navigate({ to: redirectPath || "/dashboard", replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não foi possível atualizar a senha.");
     } finally {
