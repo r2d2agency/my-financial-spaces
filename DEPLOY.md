@@ -39,6 +39,7 @@ O sistema foi totalmente desacoplado do Supabase Cloud.
 **Environment Variables (Runtime):**
 - `DATABASE_URL`: Sua string de conexão.
 - `OPENAI_API_KEY`: Sua chave da OpenAI (para leitura de comprovantes).
+- `SUPERADMIN_EMAIL` / `SUPERADMIN_PASSWORD` / `SUPERADMIN_NAME`: superadmin criado automaticamente no boot. A senha padrão só funciona uma vez: no primeiro login o sistema exige a definição de uma nova senha antes de liberar o acesso.
 - `NODE_ENV`: `production`
 - `HOST`: `0.0.0.0`
 - `PORT`: `3000`
