@@ -44,6 +44,12 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
     account_dest_id: "",
     is_liquidated: false,
     payment_method: "account", // "account" | "credit_card"
+    is_recurring: false,
+    recurring_type: "fixed", // "fixed" | "installments"
+    installments: "2",
+    installment_mode: "equal", // "equal" (total/n) | "fixed" (n * amount)
+    frequency: "monthly",
+    repeat_until: "",
   });
 
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -64,6 +70,12 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
         account_dest_id: "",
         is_liquidated: tx.status === 'paid',
         payment_method: tx.card_id ? "credit_card" : "account",
+        is_recurring: !!tx.recurring_id || !!tx.parent_transaction_id,
+        recurring_type: tx.total_installments ? "installments" : "fixed",
+        installments: String(tx.total_installments || "2"),
+        installment_mode: "equal",
+        frequency: "monthly",
+        repeat_until: "",
       });
     } else if (open) {
       setForm({
@@ -80,6 +92,12 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
         account_dest_id: "",
         is_liquidated: false,
         payment_method: "account",
+        is_recurring: false,
+        recurring_type: "fixed",
+        installments: "2",
+        installment_mode: "equal",
+        frequency: "monthly",
+        repeat_until: "",
       });
     }
   }, [tx, open]);
@@ -107,6 +125,59 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
       const amount = form.type === "income" ? Math.abs(num(form.amount)) : -Math.abs(num(form.amount));
       
       const isCard = form.type === 'expense' && form.payment_method === 'credit_card';
+
+      if (!isEdit && form.is_recurring && form.recurring_type === "installments") {
+        await db.rpc("create_recurring_installments", {
+          workspace_id: wsId!,
+          type: form.type,
+          description: form.description.trim(),
+          amount: String(Math.abs(num(form.amount))),
+          status: (form.is_liquidated && !isCard) ? "paid" : "pending",
+          date: form.competence_date,
+          account_id: isCard ? null : (form.account_id || null),
+          category_id: form.category_id || null,
+          person_name: form.person_name.trim() || null,
+          notes: form.notes.trim() || null,
+          installments: parseInt(form.installments),
+          is_fixed_amount: form.installment_mode === "fixed"
+        });
+        return;
+      }
+
+      if (!isEdit && form.is_recurring && form.recurring_type === "fixed") {
+        // Criar na tabela de recorrência
+        const rec = await db.from("recurring_transactions").insert({
+          workspace_id: wsId!,
+          type: form.type as any,
+          description: form.description.trim(),
+          amount,
+          frequency: form.frequency,
+          day_of_month: new Date(form.competence_date).getDate(),
+          is_fixed_amount: true,
+          repeat_until: form.repeat_until || null,
+          category_id: form.category_id || null,
+          account_id: isCard ? null : (form.account_id || null),
+          notes: form.notes.trim() || null,
+        });
+
+        // Criar a primeira transação
+        await db.from("transactions").insert({
+          workspace_id: wsId!,
+          type: form.type as any,
+          description: form.description.trim(),
+          amount,
+          status: (form.is_liquidated && !isCard) ? "paid" : "pending",
+          competence_date: form.competence_date,
+          account_id: isCard ? null : (form.account_id || null),
+          card_id: isCard ? (form.card_id || null) : null,
+          category_id: form.category_id || null,
+          person_name: form.person_name.trim() || null,
+          notes: form.notes.trim() || null,
+          recurring_id: rec.data.id,
+          created_by: me?.id
+        });
+        return;
+      }
 
       const data = {
         workspace_id: wsId!,
@@ -255,13 +326,98 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
               </div>
             )}
             
+            <div className="space-y-4 p-4 border rounded-lg bg-slate-50/50">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="recurring" 
+                  checked={form.is_recurring} 
+                  onCheckedChange={(v) => setForm(f => ({ ...f, is_recurring: !!v }))} 
+                />
+                <Label htmlFor="recurring" className="font-semibold text-slate-900">Esta conta se repete?</Label>
+              </div>
+
+              {form.is_recurring && (
+                <div className="space-y-4 pt-2 border-t animate-in fade-in slide-in-from-top-2">
+                  <div className="space-y-2">
+                    <Label className="text-xs">Tipo de Repetição</Label>
+                    <Tabs 
+                      value={form.recurring_type} 
+                      onValueChange={(v) => setForm(f => ({ ...f, recurring_type: v }))} 
+                      className="w-full"
+                    >
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="fixed" className="text-xs">Fixa (Mensal)</TabsTrigger>
+                        <TabsTrigger value="installments" className="text-xs">Parcelada</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  </div>
+
+                  {form.recurring_type === 'installments' ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs">Número de Parcelas</Label>
+                        <Input 
+                          type="number" 
+                          min="2" 
+                          value={form.installments} 
+                          onChange={e => setForm(f => ({ ...f, installments: e.target.value }))} 
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Modo do Valor</Label>
+                        <select 
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-xs"
+                          value={form.installment_mode}
+                          onChange={e => setForm(f => ({ ...f, installment_mode: e.target.value }))}
+                        >
+                          <option value="equal">Dividir valor total</option>
+                          <option value="fixed">Valor fixo por parcela</option>
+                        </select>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs">Frequência</Label>
+                        <select 
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-xs"
+                          value={form.frequency}
+                          onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))}
+                        >
+                          <option value="weekly">Semanal</option>
+                          <option value="monthly">Mensal</option>
+                          <option value="annually">Anual</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Repetir até (opcional)</Label>
+                        <Input 
+                          type="date" 
+                          className="text-xs"
+                          value={form.repeat_until} 
+                          onChange={e => setForm(f => ({ ...f, repeat_until: e.target.value }))} 
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
             <Button variant="ghost" className="w-full justify-between" onClick={() => setShowAdvanced(!showAdvanced)}>
-              Mais opções {showAdvanced ? <ChevronDown className="rotate-180" /> : <ChevronDown />}
+              Mais detalhes {showAdvanced ? <ChevronDown className="rotate-180" /> : <ChevronDown />}
             </Button>
             
             {showAdvanced && (
-              <div className="p-4 border rounded-lg bg-slate-50 space-y-4">
-                <p className="text-xs text-muted-foreground">Funcionalidades avançadas (Competência, Centro de custo, Recorrência, etc.) seriam expandidas aqui.</p>
+              <div className="p-4 border rounded-lg bg-slate-50 space-y-4 animate-in fade-in slide-in-from-top-2">
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground italic">Observações / Notas</Label>
+                  <Input 
+                    placeholder="Algum detalhe adicional..." 
+                    value={form.notes} 
+                    onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} 
+                  />
+                </div>
               </div>
             )}
           </div>

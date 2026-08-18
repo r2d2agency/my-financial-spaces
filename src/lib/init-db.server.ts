@@ -96,6 +96,12 @@ export async function initializeDatabase() {
         END $$;
 
         DO $$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'recurring_frequency') THEN
+                CREATE TYPE public.recurring_frequency AS ENUM ('weekly','biweekly','monthly','bimonthly','quarterly','semi-annually','annually');
+            END IF;
+        END $$;
+
+        DO $$ BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'app_role') THEN
                 CREATE TYPE public.app_role AS ENUM ('platform_admin','support');
             END IF;
@@ -331,13 +337,23 @@ export async function initializeDatabase() {
           type public.tx_type NOT NULL DEFAULT 'expense',
           description TEXT NOT NULL,
           amount NUMERIC(14,2) NOT NULL,
-          frequency TEXT NOT NULL DEFAULT 'monthly',
+          frequency public.recurring_frequency NOT NULL DEFAULT 'monthly',
           day_of_month INTEGER NOT NULL DEFAULT 5,
-          is_fixed BOOLEAN NOT NULL DEFAULT true,
+          is_fixed_amount BOOLEAN NOT NULL DEFAULT true,
+          repeat_until DATE,
           category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
           account_id UUID REFERENCES public.financial_accounts(id) ON DELETE SET NULL,
+          cost_center_id UUID REFERENCES public.cost_centers(id) ON DELETE SET NULL,
+          notes TEXT,
           created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
+
+        -- Garantir colunas novas
+        ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS frequency public.recurring_frequency DEFAULT 'monthly';
+        ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS is_fixed_amount BOOLEAN NOT NULL DEFAULT true;
+        ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS repeat_until DATE;
+        ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS cost_center_id UUID REFERENCES public.cost_centers(id) ON DELETE SET NULL;
+        ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS notes TEXT;
 
         CREATE TABLE IF NOT EXISTS public.workspace_invites (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
