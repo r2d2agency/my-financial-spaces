@@ -49,8 +49,22 @@ function Cartoes() {
     queryKey: ["cards", wsId],
     enabled: !!wsId,
     queryFn: async () => {
-      const res = await db.from("credit_cards").select("*").eq("workspace_id", wsId!).eq("archived", false).order("name").execute();
-      return (res.data as any[]) || [];
+      const res = await db.from("credit_cards").select("*").eq("workspace_id", wsId!).eq("archived", false).order("name");
+      const cardsList = (res.data as any[]) || [];
+      
+      // Para cada cartão, buscar transações pendentes para calcular o limite utilizado
+      const enrichedCards = await Promise.all(cardsList.map(async (card) => {
+        const txs = await db.from("transactions")
+          .select("amount")
+          .eq("card_id", card.id)
+          .eq("status", "pending")
+          .execute();
+        
+        const used = (txs.data as any[])?.reduce((sum, t) => sum + Math.abs(num(t.amount)), 0) || 0;
+        return { ...card, used_amount: used };
+      }));
+      
+      return enrichedCards;
     },
   });
 
@@ -58,7 +72,7 @@ function Cartoes() {
     queryKey: ["meta", wsId],
     enabled: !!wsId,
     queryFn: async () => {
-      const accs = await db.from("financial_accounts").select("id, name").eq("workspace_id", wsId!).execute();
+      const accs = await db.from("financial_accounts").select("id, name").eq("workspace_id", wsId!);
       return { accounts: (accs.data as any[]) || [] };
     }
   });
