@@ -9,7 +9,11 @@ import { hashPassword } from "./crypto.server";
  */
 async function seedSuperAdmin() {
   const email = (process.env["SUPERADMIN_EMAIL"] || "tnicodemos@gmail.com").trim().toLowerCase();
-  const password = process.env["SUPERADMIN_PASSWORD"] || "Admin@123";
+  const envPassword = process.env["SUPERADMIN_PASSWORD"]?.trim();
+  // Sem SUPERADMIN_PASSWORD definida, geramos uma senha aleatória (nunca uma
+  // senha padrão previsível). Ela é exibida uma única vez no log do boot.
+  const generated = !envPassword;
+  const password = envPassword || `Adm-${crypto.randomUUID().slice(0, 12)}`;
   const name = process.env["SUPERADMIN_NAME"] || "Super Admin";
 
   const existing = await query("SELECT id FROM auth.users WHERE lower(email) = $1", [email]);
@@ -26,6 +30,11 @@ async function seedSuperAdmin() {
     );
     userId = res.rows[0].id;
     console.log(`Superadmin criado: ${email} (troca de senha obrigatória no primeiro acesso)`);
+    if (generated) {
+      console.log(
+        `SUPERADMIN_PASSWORD não definida. Senha inicial gerada: ${password} — use no primeiro login e troque em seguida.`
+      );
+    }
   }
 
   await query(
