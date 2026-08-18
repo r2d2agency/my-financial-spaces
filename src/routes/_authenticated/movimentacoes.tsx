@@ -33,6 +33,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 export const Route = createFileRoute("/_authenticated/movimentacoes")({
   validateSearch: (search: Record<string, unknown>) => ({
     account_id: (search['account_id'] as string) || undefined,
+    card_id: (search['card_id'] as string) || undefined,
   }),
   component: Movimentacoes,
 });
