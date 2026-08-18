@@ -614,6 +614,39 @@ export const dbQuery = createServerFn({ method: "POST" })
             projections,
             current_balance: currentTotal
           };
+        if (data.rpcName === "create_recurring_installments") {
+          const { 
+            workspace_id, type, description, amount, status, date, 
+            account_id, category_id, person_name, notes, installments, 
+            is_fixed_amount 
+          } = data.rpcArgs;
+          
+          await verifyAuth(workspace_id);
+          
+          const totalAmount = parseFloat(amount);
+          const installmentAmount = is_fixed_amount ? totalAmount : (totalAmount / installments);
+          const parentId = crypto.randomUUID();
+          
+          const results = [];
+          for (let i = 1; i <= installments; i++) {
+            const dueDate = new Date(date);
+            dueDate.setMonth(dueDate.getMonth() + (i - 1));
+            
+            const res = await query(
+              `INSERT INTO public.transactions 
+               (workspace_id, type, description, amount, status, competence_date, due_date, account_id, category_id, person_name, notes, installment_number, total_installments, parent_transaction_id, created_by)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
+              [
+                workspace_id, type, `${description} (${i}/${installments})`, 
+                is_fixed_amount ? totalAmount : installmentAmount,
+                status, date, dueDate.toISOString().split('T')[0],
+                account_id || null, category_id || null, person_name || null, notes || null,
+                i, installments, parentId, userId
+              ]
+            );
+            results.push(res.rows[0]);
+          }
+          return results;
         }
       } catch (rpcErr) {
         console.error(`RPC Error (${data.rpcName}):`, rpcErr);
