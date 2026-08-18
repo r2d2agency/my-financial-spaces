@@ -122,6 +122,22 @@ export const dbQuery = createServerFn({ method: "POST" })
     }
 
     if (data.action === "update") {
+      if (data.table === "transactions" && data.data) {
+        data.data.updated_at = new Date();
+        data.data.updated_by = userId;
+        const { workspace_id, category_id, account_id } = data.data;
+        if (workspace_id) {
+          if (category_id) {
+            const cat = await query("SELECT 1 FROM public.categories WHERE id = $1 AND workspace_id = $2", [category_id, workspace_id]);
+            if (cat.rows.length === 0) throw new Error("Categoria inválida para este espaço.");
+          }
+          if (account_id) {
+            const acc = await query("SELECT 1 FROM public.financial_accounts WHERE id = $1 AND workspace_id = $2", [account_id, workspace_id]);
+            if (acc.rows.length === 0) throw new Error("Conta inválida para este espaço.");
+          }
+        }
+      }
+
       const keys = Object.keys(data.data);
       const vals = Object.values(data.data);
       const setClauses = keys.map((key, i) => `${key} = $${i + 1}`).join(", ");
@@ -138,9 +154,11 @@ export const dbQuery = createServerFn({ method: "POST" })
         sql += ` WHERE ${whereClauses.join(" AND ")}`;
       }
       
+      sql += " RETURNING *";
       const res = await query(sql, params);
-      return res.rowCount;
+      return res.rows[0];
     }
+
 
     if (data.action === "delete") {
       let sql = `DELETE FROM ${data.table}`;
