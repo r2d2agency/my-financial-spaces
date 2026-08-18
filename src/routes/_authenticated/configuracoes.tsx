@@ -35,11 +35,16 @@ function Configuracoes() {
   const qc = useQueryClient();
   const [name, setName] = useState(current?.workspaces?.name ?? "");
   const [income, setIncome] = useState(String(current?.workspaces?.expected_income ?? ""));
-  const [invite, setInvite] = useState({ email: "", role: "viewer" as Role });
+  const [invite, setInvite] = useState({ 
+    email: "", 
+    name: "",
+    password: "",
+    role: "viewer" as Role 
+  });
   const [openaiKey, setOpenaiKey] = useState("");
   
   const getUser = useServerFn(getCurrentUser);
-  const doInvite = useServerFn(inviteMember);
+  const doInvite = useServerFn(createMemberWithAccount);
   const doRemove = useServerFn(removeMember);
   const doUpdateRole = useServerFn(updateMemberRole);
   const doCancelInvite = useServerFn(cancelInvite);
