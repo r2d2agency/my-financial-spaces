@@ -182,7 +182,7 @@ export async function initializeDatabase() {
         CREATE TABLE IF NOT EXISTS public.workspace_members (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-          user_id UUID NOT NULL,
+          user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
           role public.workspace_role NOT NULL DEFAULT 'viewer',
           hide_balances BOOLEAN NOT NULL DEFAULT false,
           can_invite BOOLEAN NOT NULL DEFAULT false,
@@ -401,6 +401,10 @@ export async function initializeDatabase() {
             (v_ws_id, 'Salário', 'income', '#10b981'),
             (v_ws_id, 'Freelance', 'income', '#6366f1');
 
+            -- 6. Garantir que o owner tenha acesso aos dados do workspace via RLS (lógica de aplicação)
+            -- Como estamos em Postgres Puro sem RLS real do Supabase habilitado no driver JS, 
+            -- a separação multi-tenant é feita via filtros de workspace_id nas queries.
+            
             RETURN v_ws_id;
         EXCEPTION WHEN OTHERS THEN
             RAISE NOTICE 'Error in create_workspace: %', SQLERRM;
