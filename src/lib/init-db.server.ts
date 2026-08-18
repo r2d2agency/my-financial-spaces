@@ -109,7 +109,9 @@ export async function initializeDatabase() {
 
         DO $$ BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tx_type') THEN
-                CREATE TYPE public.tx_type AS ENUM ('income','expense','transfer','refund','debt_payment','card_payment','adjustment');
+                CREATE TYPE public.tx_type AS ENUM ('income','expense','transfer','refund','debt_payment','card_payment','adjustment', 'extra_income');
+            ELSE
+                ALTER TYPE public.tx_type ADD VALUE IF NOT EXISTS 'extra_income';
             END IF;
         END $$;
 

@@ -40,6 +40,7 @@ export const TX_TYPES = [
   { value: "debt_payment", label: "Pagamento de dívida" },
   { value: "card_payment", label: "Pagamento de cartão" },
   { value: "adjustment", label: "Ajuste de saldo" },
+  { value: "extra_income", label: "Receita Extra" },
 ] as const;
 
 export const ACCOUNT_KINDS = [
@@ -62,7 +63,7 @@ export const ROLES = [
 
 export type Role = (typeof ROLES)[number]["value"];
 
-export const isIncomeType = (t: string) => t === "income" || t === "refund";
+export const isIncomeType = (t: string) => t === "income" || t === "refund" || t === "extra_income";
 export const isExpenseType = (t: string) =>
   t === "expense" || t === "debt_payment" || t === "card_payment";
 
