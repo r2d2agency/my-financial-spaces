@@ -28,10 +28,12 @@ export const TX_TYPES = [
 
 export const ACCOUNT_KINDS = [
   { value: "checking", label: "Conta corrente" },
+  { value: "digital", label: "Conta digital" },
   { value: "savings", label: "Poupança" },
-  { value: "wallet", label: "Carteira digital" },
-  { value: "cash", label: "Dinheiro" },
+  { value: "wallet", label: "Carteira / Dinheiro" },
+  { value: "cash", label: "Dinheiro vivo" },
   { value: "investment", label: "Investimento" },
+  { value: "other", label: "Outros" },
 ] as const;
 
 export const ROLES = [
