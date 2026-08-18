@@ -37,11 +37,13 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
     competence_date: iso(new Date()),
     status: "pending",
     account_id: "",
+    card_id: "",
     category_id: "",
     person_name: "",
     notes: "",
     account_dest_id: "",
     is_liquidated: false,
+    payment_method: "account", // "account" | "credit_card"
   });
 
   const [showAdvanced, setShowAdvanced] = useState(false);
