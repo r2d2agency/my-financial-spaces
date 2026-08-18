@@ -6,29 +6,45 @@ export const getAdminStatus = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { adminClient } = await import("@/lib/admin.server");
     const admin = await adminClient();
-    const mine = await admin.from("user_roles").select("role").eq("user_id", context!.userId).eq("role", "platform_admin").maybeSingle();
-    const any = await admin.from("user_roles").select("*").eq("role", "platform_admin");
-    const adminCount = Array.isArray(any.data) ? any.data.length : 0;
     
-    return { isAdmin: !!mine.data, adminExists: adminCount > 0 };
+    const mineRes = await admin.from("user_roles")
+      .select("role")
+      .eq("user_id", context!.userId)
+      .eq("role", "platform_admin")
+      .maybeSingle();
+      
+    const anyRes = await admin.from("user_roles")
+      .select("*")
+      .eq("role", "platform_admin")
+      .execute();
+      
+    const adminCount = Array.isArray(anyRes.data) ? anyRes.data.length : 0;
+    
+    return { isAdmin: !!mineRes.data, adminExists: adminCount > 0 };
   });
+
 
 export const claimPlatformAdmin = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .handler(async ({ context }) => {
     const { adminClient, logAdminAction } = await import("@/lib/admin.server");
     const admin = await adminClient();
-    const any = await admin.from("user_roles").select("*").eq("role", "platform_admin");
+    
+    const any = await admin.from("user_roles").select("*").eq("role", "platform_admin").execute();
     const count = Array.isArray(any.data) ? any.data.length : 0;
     
     if (count > 0) throw new Error("A plataforma já possui um administrador.");
+    
     const { error } = await admin
       .from("user_roles")
       .insert({ user_id: context!.userId, role: "platform_admin" });
+      
     if (error) throw new Error(error.message);
+    
     await logAdminAction(admin, context!.userId, "platform_admin.claim", "user_roles", context!.userId);
     return { ok: true };
   });
+
 
 export const adminOverview = createServerFn({ method: "GET" })
   .middleware([requireAuth])
