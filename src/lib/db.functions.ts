@@ -329,6 +329,70 @@ export const dbQuery = createServerFn({ method: "POST" })
           const currentBalance = initialBalance + parseFloat(trans.rows[0].total);
           return { current_balance: currentBalance };
         }
+        if (data.rpcName === "get_card_details") {
+          const { card_id, workspace_id } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+
+          const card = await query(
+            "SELECT credit_limit FROM public.credit_cards WHERE id = $1 AND workspace_id = $2",
+            [card_id, workspace_id]
+          );
+          if (card.rows.length === 0) throw new Error("Cartão não encontrado");
+
+          const limit = parseFloat(card.rows[0].credit_limit);
+
+          const used = await query(
+            "SELECT COALESCE(SUM(ABS(amount)), 0) as total FROM public.transactions WHERE card_id = $1 AND workspace_id = $2 AND status = 'pending'",
+            [card_id, workspace_id]
+          );
+
+          const usedAmount = parseFloat(used.rows[0].total);
+          return {
+            credit_limit: limit,
+            used_amount: usedAmount,
+            available_limit: limit - usedAmount
+          };
+        }
+
+        if (data.rpcName === "pay_credit_card_invoice") {
+          const { invoice_id, account_id, payment_date, amount, workspace_id } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+
+          const invoice = await query(
+            "SELECT * FROM public.credit_card_invoices WHERE id = $1 AND workspace_id = $2",
+            [invoice_id, workspace_id]
+          );
+          if (invoice.rows.length === 0) throw new Error("Fatura não encontrada");
+
+          const card = await query("SELECT name FROM public.credit_cards WHERE id = $1", [invoice.rows[0].card_id]);
+          const cardName = card.rows[0]?.name || "Cartão";
+
+          await query(
+            `INSERT INTO public.transactions (workspace_id, type, description, amount, status, competence_date, paid_date, account_id, created_by, notes) 
+             VALUES ($1, 'card_payment', $2, $3, 'paid', $4, $4, $5, $6, $7)`,
+            [
+              workspace_id, 
+              `Pagamento Fatura ${invoice.rows[0].period_month}/${invoice.rows[0].period_year} - ${cardName}`, 
+              -Math.abs(amount), 
+              payment_date, 
+              account_id, 
+              userId,
+              `Pagamento da fatura ID: ${invoice_id}`
+            ]
+          );
+
+          await query(
+            "UPDATE public.transactions SET status = 'paid', paid_date = $1 WHERE invoice_id = $2 AND workspace_id = $3",
+            [payment_date, invoice_id, workspace_id]
+          );
+
+          await query(
+            "UPDATE public.credit_card_invoices SET status = 'paid' WHERE id = $1 AND workspace_id = $2",
+            [invoice_id, workspace_id]
+          );
+
+          return { success: true };
+        }
       } catch (rpcErr) {
         console.error(`RPC Error (${data.rpcName}):`, rpcErr);
         if (rpcErr instanceof Error) {

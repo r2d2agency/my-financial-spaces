@@ -243,14 +243,30 @@ export async function initializeDatabase() {
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
           name TEXT NOT NULL,
+          institution TEXT,
+          last_digits TEXT,
           brand TEXT,
           credit_limit NUMERIC(14,2) NOT NULL DEFAULT 0,
           closing_day INTEGER NOT NULL DEFAULT 1,
           due_day INTEGER NOT NULL DEFAULT 10,
-          holder_name TEXT,
+          default_payment_account_id UUID REFERENCES public.financial_accounts(id) ON DELETE SET NULL,
           archived BOOLEAN NOT NULL DEFAULT false,
           created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
           updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS public.credit_card_invoices (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+          card_id UUID NOT NULL REFERENCES public.credit_cards(id) ON DELETE CASCADE,
+          period_month INTEGER NOT NULL,
+          period_year INTEGER NOT NULL,
+          closing_date DATE NOT NULL,
+          due_date DATE NOT NULL,
+          status public.tx_status NOT NULL DEFAULT 'pending', -- pending, paid, overdue
+          total_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          UNIQUE (card_id, period_month, period_year)
         );
 
         CREATE TABLE IF NOT EXISTS public.transactions (
@@ -267,6 +283,7 @@ export async function initializeDatabase() {
           account_id UUID REFERENCES public.financial_accounts(id) ON DELETE SET NULL,
           to_account_id UUID REFERENCES public.financial_accounts(id) ON DELETE SET NULL,
           card_id UUID REFERENCES public.credit_cards(id) ON DELETE SET NULL,
+          invoice_id UUID REFERENCES public.credit_card_invoices(id) ON DELETE SET NULL,
           category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
           created_by UUID NOT NULL,
           created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -604,6 +621,30 @@ export async function initializeDatabase() {
         ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS transfer_id UUID;
         ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS notes TEXT;
         ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS notes TEXT;
+
+        -- Sprint C: Ciclo de Faturas de Cartão (Novos Campos)
+        ALTER TABLE public.credit_cards ADD COLUMN IF NOT EXISTS institution TEXT;
+        ALTER TABLE public.credit_cards ADD COLUMN IF NOT EXISTS last_digits TEXT;
+        ALTER TABLE public.credit_cards ADD COLUMN IF NOT EXISTS default_payment_account_id UUID REFERENCES public.financial_accounts(id);
+        
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS invoice_id UUID REFERENCES public.credit_card_invoices(id);
+
+        -- Faturas (Tabela principal para Etapa 5)
+        CREATE TABLE IF NOT EXISTS public.credit_card_invoices (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+          card_id UUID NOT NULL REFERENCES public.credit_cards(id) ON DELETE CASCADE,
+          period_month INTEGER NOT NULL,
+          period_year INTEGER NOT NULL,
+          closing_date DATE NOT NULL,
+          due_date DATE NOT NULL,
+          status public.tx_status NOT NULL DEFAULT 'pending', -- pending, paid, overdue
+          total_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          UNIQUE (card_id, period_month, period_year)
+        );
+
+        DROP TABLE IF EXISTS public.credit_card_bills;
       `;
 
       await query(sql);

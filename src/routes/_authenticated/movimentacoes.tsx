@@ -33,6 +33,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 export const Route = createFileRoute("/_authenticated/movimentacoes")({
   validateSearch: (search: Record<string, unknown>) => ({
     account_id: (search['account_id'] as string) || undefined,
+    card_id: (search['card_id'] as string) || undefined,
   }),
   component: Movimentacoes,
 });
@@ -96,8 +97,9 @@ function Movimentacoes() {
     queryKey: ["transactions", wsId, startIso, endIso, tab, statusFilter, search],
     enabled: !!wsId,
     queryFn: async () => {
+      const searchParams = Route.useSearch();
       let query = db.from("transactions")
-        .select("*")
+        .select("*, accounts(name), credit_cards(name)")
         .eq("workspace_id", wsId!)
         .gte("competence_date", startIso)
         .lte("competence_date", endIso)
@@ -106,6 +108,9 @@ function Movimentacoes() {
       if (tab !== "all") query = query.eq("type", tab);
       if (statusFilter === "pending") query = query.eq("status", "pending");
       else if (statusFilter === "paid") query = query.eq("status", "paid");
+      
+      if (searchParams.account_id && searchParams.account_id !== 'undefined') query = query.eq("account_id", searchParams.account_id);
+      if (searchParams.card_id && searchParams.card_id !== 'undefined') query = query.eq("card_id", searchParams.card_id);
       
       const { data } = await query.execute();
       return Array.isArray(data) ? data : [];

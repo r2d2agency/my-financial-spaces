@@ -304,7 +304,7 @@ function ContasPage() {
                 </CardContent>
                 <CardFooter className="bg-muted/30 p-2 flex justify-between gap-2 border-t">
                   <Button variant="ghost" size="sm" className="w-full text-xs h-8 gap-2" asChild>
-                    <Link to="/movimentacoes" search={{ account_id: acc.id }}>
+                    <Link to="/movimentacoes" search={(prev: any) => ({ ...prev, account_id: acc.id })}>
                       <History className="size-3" /> Extrato
                     </Link>
                   </Button>

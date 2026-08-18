@@ -14,7 +14,23 @@ export const monthRange = (ref: Date) => {
   return { start, end, startIso: iso(start), endIso: iso(end) };
 };
 
-export const addMonths = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth() + n, 1);
+export const addMonths = (d: Date, n: number) => {
+  const newDate = new Date(d);
+  newDate.setMonth(d.getMonth() + n);
+  return newDate;
+};
+
+export const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+};
+
+export const parseBRL = (value: string) => {
+  const clean = value.replace(/[^\d,]/g, "").replace(",", ".");
+  return parseFloat(clean) || 0;
+};
 
 export const TX_TYPES = [
   { value: "income", label: "Receita" },
