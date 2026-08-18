@@ -165,12 +165,12 @@ function Dashboard() {
 
           <div className="grid md:grid-cols-2 gap-6">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-base">A Receber</CardTitle>
-                <Button variant="ghost" size="sm" asChild className="h-7 text-xs">
-                  <Link to="/movimentacoes" search={{ type: 'income', status: 'pending' }}>Ver todas</Link>
-                </Button>
-              </CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base">A Receber</CardTitle>
+              <Button variant="ghost" size="sm" asChild className="h-7 text-xs">
+                <Link to="/movimentacoes" search={{ account_id: undefined, card_id: undefined }}>Ver todas</Link>
+              </Button>
+            </CardHeader>
               <CardContent className="pt-0 space-y-3">
                 {summary.upcoming.filter((t: any) => isIncomeType(t.type)).length === 0 ? (
                   <p className="text-xs text-muted-foreground py-4 text-center">Nenhuma receita pendente.</p>
