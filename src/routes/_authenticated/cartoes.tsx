@@ -94,7 +94,7 @@ function Cartoes() {
         payment_date: payForm.date,
         amount: payForm.amount,
         workspace_id: wsId!
-      }).execute();
+      });
       if (res.error) throw res.error;
     },
     onSuccess: () => {
