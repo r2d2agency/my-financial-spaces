@@ -10,21 +10,17 @@ import { hashPassword } from "./crypto.server";
 async function seedSuperAdmin() {
   const email = (process.env["SUPERADMIN_EMAIL"] || "tnicodemos@gmail.com").trim().toLowerCase();
   const envPassword = process.env["SUPERADMIN_PASSWORD"]?.trim();
-  // Sem SUPERADMIN_PASSWORD definida, geramos uma senha aleatória (nunca uma
-  // senha padrão previsível). Ela é exibida uma única vez no log do boot.
   const generated = !envPassword;
   const password = envPassword || `Adm-${crypto.randomUUID().slice(0, 12)}`;
   const name = process.env["SUPERADMIN_NAME"] || "Super Admin";
 
-  // Buscamos o usuário ignorando case e espaços
-  const existing = await query("SELECT id, password_hash FROM auth.users WHERE lower(trim(email)) = lower($1)", [email]);
+  const existing = await query("SELECT id FROM auth.users WHERE lower(trim(email)) = lower($1)", [email]);
   let userId: string;
 
   if (existing.rows.length > 0) {
     userId = existing.rows[0].id;
     console.log(`Superadmin já existe: ${email}`);
     
-    // Se a senha foi alterada via ENV, atualizamos o hash para garantir que o que está no .env funcione
     if (envPassword) {
       const pwHash = await hashPassword(password);
       await query(
@@ -41,14 +37,13 @@ async function seedSuperAdmin() {
       [email, pwHash, JSON.stringify({ full_name: name })]
     );
     userId = res.rows[0].id;
-    console.log(`Superadmin criado: ${email} (troca de senha obrigatória no primeiro acesso)`);
+    console.log(`Superadmin criado: ${email}`);
     if (generated) {
-      console.log(
-        `SUPERADMIN_PASSWORD não definida. Senha inicial gerada: ${password} — use no primeiro login e troque em seguida.`
-      );
+      console.log(`Senha gerada: ${password}`);
     }
   }
 
+  // Garantir Perfil
   await query(
     `INSERT INTO public.profiles (id, full_name, email)
      VALUES ($1, $2, $3)
@@ -56,6 +51,7 @@ async function seedSuperAdmin() {
     [userId, name, email]
   );
 
+  // Garantir Role de Admin
   await query(
     `INSERT INTO public.user_roles (user_id, role)
      VALUES ($1, 'platform_admin')
@@ -63,6 +59,7 @@ async function seedSuperAdmin() {
     [userId]
   );
 }
+
 
 export async function initializeDatabase() {
   console.log("Checking database initialization...");
