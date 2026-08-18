@@ -37,11 +37,21 @@ export const db = {
         return this;
       },
 
+      ilike(col: string, val: any) {
+        this.filters[`${col} ILIKE`] = val;
+        return this;
+      },
+
+      or(clause: string) {
+        this.filters[`OR`] = clause; // Nota: Implementação SQL no backend precisaria ser mais robusta para OR complexo
+        return this;
+      },
+
       not(col: string, operator: string, val: any) {
         if (operator === "is" && val === null) {
-          this.filters[`${col}_not_null`] = true;
+          this.filters[`${col} IS NOT NULL`] = true;
         } else {
-          this.filters[`${col}_not_${operator}`] = val;
+          this.filters[`${col} !=`] = val;
         }
         return this;
       },
