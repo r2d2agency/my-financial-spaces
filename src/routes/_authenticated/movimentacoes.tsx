@@ -68,6 +68,7 @@ import { ArrowUpRight, ArrowDownLeft, ArrowRightLeft } from "lucide-react";
 
 function Movimentacoes() {
   const { wsId, hideBalances } = useWorkspace();
+  const searchParams = Route.useSearch();
   const [ref, setRef] = useState(() => new Date());
   const [tab, setTab] = useState<"all" | "income" | "expense" | "transfer">("all");
   const [search, setSearch] = useState("");
@@ -93,15 +94,13 @@ function Movimentacoes() {
     },
   });
 
-  const { data: rows, isLoading, refetch } = useQuery({
-    queryKey: ["transactions", wsId, startIso, endIso, tab, statusFilter, search],
+  const { data: rows, isLoading, error, refetch } = useQuery({
+    queryKey: ["transactions", wsId, startIso, endIso, tab, statusFilter, search, searchParams.account_id, searchParams.card_id],
     enabled: !!wsId,
+    retry: false,
     queryFn: async () => {
-      const searchParams = Route.useSearch();
-      console.log("Fetching transactions for workspace:", wsId, "range:", startIso, "to", endIso);
-      
       let query = db.from("transactions")
-        .select("*, accounts(name), credit_cards(name)")
+        .select("*")
         .eq("workspace_id", wsId!)
         .gte("competence_date", startIso)
         .lte("competence_date", endIso)
@@ -114,15 +113,14 @@ function Movimentacoes() {
       if (searchParams.account_id && searchParams.account_id !== 'undefined') query = query.eq("account_id", searchParams.account_id);
       if (searchParams.card_id && searchParams.card_id !== 'undefined') query = query.eq("card_id", searchParams.card_id);
       
-      const { data, error } = await query.execute();
-      if (error) {
-        console.error("Error fetching transactions:", error);
-        toast.error("Erro ao carregar movimentações");
-        throw error;
-      }
+      const { data, error: qErr } = await query.execute();
+      if (qErr) throw qErr;
       return Array.isArray(data) ? data : [];
     },
   });
+
+  const accountName = (t: any) =>
+    meta?.accounts.find((a: any) => a.id === t.account_id)?.name ?? "Sem conta";
 
   const stats = useMemo(() => {
     const list = rows || [];
