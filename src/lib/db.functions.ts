@@ -53,15 +53,12 @@ export const dbQuery = createServerFn({ method: "POST" })
       const params: any[] = [];
       if (data.filters) {
         const clauses = Object.entries(data.filters).map(([key, val]) => {
-          if (val === null) return `${key} IS NULL`;
-          
-          // Suporte a operadores no key (e.g. "workspace_id(id, name)")
-          if (key.includes('(')) {
-            // Se for um join simulado como "workspaces(id, name)"
-            // No momento, o db-browser envia isso para SELECT columns, mas se vier em filters tratamos aqui.
-            // Para simplificar, focamos nos operadores de comparação.
+          if (key === 'OR') return `(${val})`;
+          if (val === null) {
+             if (key.includes(' IS NOT NULL')) return key;
+             return `${key} IS NULL`;
           }
-
+          
           const parts = key.split(' ');
           if (parts.length > 1) {
             const field = parts[0];
@@ -70,6 +67,10 @@ export const dbQuery = createServerFn({ method: "POST" })
             if (op === "= ANY") {
               params.push(val);
               return `${field} = ANY($${params.length})`;
+            }
+            if (op === "ILIKE") {
+              params.push(`%${val}%`);
+              return `${field} ILIKE $${params.length}`;
             }
             
             params.push(val);
