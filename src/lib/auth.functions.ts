@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { query } from "./db.server";
-import { createSession } from "./auth.server";
+import { createSession, getSession } from "./auth.server";
 import { hashPassword, comparePassword } from "./crypto.server";
 
 export const signUp = createServerFn({ method: "POST" })
