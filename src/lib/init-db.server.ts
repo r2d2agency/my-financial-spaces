@@ -313,9 +313,10 @@ export async function initializeDatabase() {
           workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
           email TEXT NOT NULL,
           role public.workspace_role NOT NULL DEFAULT 'viewer',
-          hide_balances BOOLEAN NOT NULL DEFAULT false,
-          invited_by UUID,
+          token TEXT NOT NULL UNIQUE DEFAULT gen_random_uuid(),
           status public.invite_status NOT NULL DEFAULT 'pending',
+          invited_by UUID REFERENCES auth.users(id),
+          expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '7 days'),
           created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
 
