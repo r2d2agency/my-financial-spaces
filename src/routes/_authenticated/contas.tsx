@@ -82,7 +82,7 @@ function ContasPage() {
       const list = Array.isArray(res?.data) ? res.data : [];
       
       // Enriquecer com saldo atual via RPC para cada conta
-      const enriched = await Promise.all(list.map(async (acc) => {
+      const enriched = await Promise.all(list.map(async (acc: any) => {
         const bal = await db.rpc("get_account_balance", { account_id: acc.id, workspace_id: wsId });
         return { ...acc, current_balance: bal?.data?.current_balance ?? acc.initial_balance };
       }));
@@ -266,7 +266,7 @@ function ContasPage() {
                     <div>
                       <CardTitle className="text-base font-semibold flex items-center gap-2">
                         {acc.name}
-                        {acc.is_default && <Star className="size-3 fill-amber-400 text-amber-400" title="Conta Padrão" />}
+                        {acc.is_default && <Star className="size-3 fill-amber-400 text-amber-400" />}
                       </CardTitle>
                       <p className="text-xs text-muted-foreground">
                         {acc.institution || 'Carteira'}
