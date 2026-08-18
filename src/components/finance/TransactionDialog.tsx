@@ -44,6 +44,12 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
     account_dest_id: "",
     is_liquidated: false,
     payment_method: "account", // "account" | "credit_card"
+    is_recurring: false,
+    recurring_type: "fixed", // "fixed" | "installments"
+    installments: "2",
+    installment_mode: "equal", // "equal" (total/n) | "fixed" (n * amount)
+    frequency: "monthly",
+    repeat_until: "",
   });
 
   const [showAdvanced, setShowAdvanced] = useState(false);
