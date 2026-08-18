@@ -7,20 +7,32 @@ export async function adminClient() {
   return {
     from: (table: string) => ({
       select: (cols: string, opts?: any) => ({
-        eq: (col: string, val: any) => ({
-          maybeSingle: async () => {
-             const res = await query(`SELECT * FROM ${table} WHERE ${col} = $1 LIMIT 1`, [val]);
-             return { data: res.rows[0] || null, error: null };
-          },
-          select: async (cols: string) => {
-             const res = await query(`SELECT ${cols} FROM ${table} WHERE ${col} = $1`, [val]);
-             return { data: res.rows, error: null };
-          },
-          execute: async () => {
-             const res = await query(`SELECT * FROM ${table} WHERE ${col} = $1`, [val]);
-             return { data: res.rows, error: null };
-          }
-        }),
+        eq: (col: string, val: any) => {
+          const conditions = [[col, val]];
+          const chain = {
+            eq: (c: string, v: any) => {
+              conditions.push([c, v]);
+              return chain;
+            },
+            maybeSingle: async () => {
+              const where = conditions.map((c, i) => `${c[0]} = $${i + 1}`).join(" AND ");
+              const res = await query(`SELECT * FROM ${table} WHERE ${where} LIMIT 1`, conditions.map(c => c[1]));
+              return { data: res.rows[0] || null, error: null };
+            },
+            select: async (cols: string) => {
+              const where = conditions.map((c, i) => `${c[0]} = $${i + 1}`).join(" AND ");
+              const res = await query(`SELECT ${cols} FROM ${table} WHERE ${where}`, conditions.map(c => c[1]));
+              return { data: res.rows, error: null };
+            },
+            execute: async () => {
+              const where = conditions.map((c, i) => `${c[0]} = $${i + 1}`).join(" AND ");
+              const res = await query(`SELECT * FROM ${table} WHERE ${where}`, conditions.map(c => c[1]));
+              return { data: res.rows, error: null };
+            }
+          };
+          return chain;
+        },
+
         in: (col: string, vals: any[]) => ({
            async execute() {
               const res = await query(`SELECT * FROM ${table} WHERE ${col} = ANY($1)`, [vals]);

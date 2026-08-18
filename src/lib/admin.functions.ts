@@ -6,12 +6,23 @@ export const getAdminStatus = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { adminClient } = await import("@/lib/admin.server");
     const admin = await adminClient();
-    const mine = await admin.from("user_roles").select("role").eq("user_id", context!.userId).eq("role", "platform_admin").maybeSingle();
-    const any = await admin.from("user_roles").select("*").eq("role", "platform_admin");
-    const adminCount = Array.isArray(any.data) ? any.data.length : 0;
     
-    return { isAdmin: !!mine.data, adminExists: adminCount > 0 };
+    const mineRes = await admin.from("user_roles")
+      .select("role")
+      .eq("user_id", context!.userId)
+      .eq("role", "platform_admin")
+      .maybeSingle();
+      
+    const anyRes = await admin.from("user_roles")
+      .select("*")
+      .eq("role", "platform_admin")
+      .execute();
+      
+    const adminCount = Array.isArray(anyRes.data) ? anyRes.data.length : 0;
+    
+    return { isAdmin: !!mineRes.data, adminExists: adminCount > 0 };
   });
+
 
 export const claimPlatformAdmin = createServerFn({ method: "POST" })
   .middleware([requireAuth])
