@@ -112,7 +112,7 @@ function Dashboard() {
           <p className="text-sm capitalize text-muted-foreground">{monthLabel(now)}</p>
         </div>
         <Button asChild>
-          <Link to="/movimentacoes" search={{ account_id: undefined }}>Nova movimentação</Link>
+          <Link to="/movimentacoes" search={(prev: any) => ({ ...prev, account_id: undefined, card_id: undefined })}>Nova movimentação</Link>
         </Button>
       </div>
 
