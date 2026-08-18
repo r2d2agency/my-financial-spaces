@@ -87,6 +87,10 @@ export async function initializeDatabase() {
         DO $$ BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'workspace_role') THEN
                 CREATE TYPE public.workspace_role AS ENUM ('owner','admin','manager','operator','viewer');
+            ELSE
+                -- Garantir que os novos enums existam mesmo que o tipo já exista
+                ALTER TYPE public.workspace_role ADD VALUE IF NOT EXISTS 'manager';
+                ALTER TYPE public.workspace_role ADD VALUE IF NOT EXISTS 'operator';
             END IF;
         END $$;
 
@@ -111,6 +115,9 @@ export async function initializeDatabase() {
         DO $$ BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tx_status') THEN
                 CREATE TYPE public.tx_status AS ENUM ('pending','paid','partial','canceled');
+            ELSE
+                ALTER TYPE public.tx_status ADD VALUE IF NOT EXISTS 'partial';
+                ALTER TYPE public.tx_status ADD VALUE IF NOT EXISTS 'canceled';
             END IF;
         END $$;
 
