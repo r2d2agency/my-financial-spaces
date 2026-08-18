@@ -80,8 +80,8 @@ function Movimentacoes() {
         db.from("categories").select("id, name").eq("workspace_id", wsId!).execute(),
       ]);
       return {
-        accounts: accs.data || [],
-        categories: cats.data || [],
+        accounts: (accs.data as any[]) || [],
+        categories: (cats.data as any[]) || [],
       };
     },
   });
@@ -186,8 +186,8 @@ function Movimentacoes() {
     onError: (e: Error) => toast.error(e.message)
   });
 
-  const getAccountName = (id: string) => meta?.accounts.find(a => a.id === id)?.name || "—";
-  const getCategoryName = (id: string) => meta?.categories.find(c => c.id === id)?.name || "—";
+  const getAccountName = (id: string) => meta?.accounts.find((a: any) => a.id === id)?.name || "—";
+  const getCategoryName = (id: string) => meta?.categories.find((c: any) => c.id === id)?.name || "—";
 
   return (
     <div className="flex flex-col h-full bg-background -mt-6 -mx-6 md:-mx-8 lg:-mx-10 overflow-hidden">
