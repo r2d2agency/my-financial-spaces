@@ -571,15 +571,24 @@ export async function initializeDatabase() {
           created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
           updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS updated_by UUID;
+        ALTER TABLE public.financial_accounts ADD COLUMN IF NOT EXISTS updated_by UUID;
+        ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS updated_by UUID;
+        ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS updated_by UUID;
+        
+        -- Atualizações de colunas da refatoração
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS actual_amount NUMERIC(14,2);
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS installment_number INTEGER;
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS total_installments INTEGER;
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS parent_transaction_id UUID REFERENCES public.transactions(id) ON DELETE SET NULL;
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS transfer_id UUID;
       `;
 
       await query(sql);
       await seedSuperAdmin();
-      console.log("Database initialized successfully!");
-    } else {
-      console.log("Database already initialized.");
+      console.log("Database initialized/verified successfully.");
     }
-  } catch (error) {
-    console.error("Failed to initialize database:", error);
+  } catch (err) {
+    console.error("Database initialization failed:", err);
   }
 }
