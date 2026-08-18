@@ -234,6 +234,29 @@ export const dbQuery = createServerFn({ method: "POST" })
             return { success: true, id: res.rows[0].id };
           }
         }
+        // Etapa 2: Liquidação e Reversão
+        if (data.rpcName === "settle_transaction") {
+          const { id, workspace_id, account_id, paid_date, amount } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+          const updateData: any = { status: 'paid', paid_date: paid_date || new Date(), updated_by: userId, updated_at: new Date() };
+          if (account_id) updateData.account_id = account_id;
+          if (amount !== undefined) updateData.amount = amount;
+          
+          const keys = Object.keys(updateData);
+          const setClauses = keys.map((k, i) => `${k} = $${i + 1}`).join(", ");
+          const sql = `UPDATE public.transactions SET ${setClauses} WHERE id = $${keys.length + 1} AND workspace_id = $${keys.length + 2} RETURNING *`;
+          const res = await query(sql, [...Object.values(updateData), id, workspace_id]);
+          return res.rows[0];
+        }
+        if (data.rpcName === "revert_settlement") {
+          const { id, workspace_id } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+          const res = await query(
+            "UPDATE public.transactions SET status = 'pending', paid_date = NULL, updated_by = $1, updated_at = NOW() WHERE id = $2 AND workspace_id = $3 RETURNING *",
+            [userId, id, workspace_id]
+          );
+          return res.rows[0];
+        }
       } catch (rpcErr) {
         console.error(`RPC Error (${data.rpcName}):`, rpcErr);
         if (rpcErr instanceof Error) {
