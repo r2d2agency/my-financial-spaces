@@ -86,7 +86,11 @@ export async function initializeDatabase() {
         -- 2. SCHEMAS E ENUMS
         DO $$ BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'workspace_role') THEN
-                CREATE TYPE public.workspace_role AS ENUM ('owner','admin','editor','viewer','consultant');
+                CREATE TYPE public.workspace_role AS ENUM ('owner','admin','manager','operator','viewer');
+            ELSE
+                -- Garantir que os novos enums existam mesmo que o tipo já exista
+                ALTER TYPE public.workspace_role ADD VALUE IF NOT EXISTS 'manager';
+                ALTER TYPE public.workspace_role ADD VALUE IF NOT EXISTS 'operator';
             END IF;
         END $$;
 
@@ -110,7 +114,10 @@ export async function initializeDatabase() {
 
         DO $$ BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tx_status') THEN
-                CREATE TYPE public.tx_status AS ENUM ('pending','paid');
+                CREATE TYPE public.tx_status AS ENUM ('pending','paid','partial','canceled');
+            ELSE
+                ALTER TYPE public.tx_status ADD VALUE IF NOT EXISTS 'partial';
+                ALTER TYPE public.tx_status ADD VALUE IF NOT EXISTS 'canceled';
             END IF;
         END $$;
 
@@ -240,6 +247,7 @@ export async function initializeDatabase() {
           type public.tx_type NOT NULL,
           description TEXT NOT NULL,
           amount NUMERIC(14,2) NOT NULL,
+          actual_amount NUMERIC(14,2),
           status public.tx_status NOT NULL DEFAULT 'pending',
           competence_date DATE NOT NULL DEFAULT CURRENT_DATE,
           due_date DATE,
@@ -252,7 +260,11 @@ export async function initializeDatabase() {
           created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
           updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
           recurring_id UUID REFERENCES public.recurring_transactions(id) ON DELETE SET NULL,
-          is_estimated BOOLEAN NOT NULL DEFAULT false
+          is_estimated BOOLEAN NOT NULL DEFAULT false,
+          installment_number INTEGER,
+          total_installments INTEGER,
+          parent_transaction_id UUID REFERENCES public.transactions(id) ON DELETE SET NULL,
+          transfer_id UUID
         );
 
         CREATE TABLE IF NOT EXISTS public.debts (
@@ -566,15 +578,24 @@ export async function initializeDatabase() {
           created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
           updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS updated_by UUID;
+        ALTER TABLE public.financial_accounts ADD COLUMN IF NOT EXISTS updated_by UUID;
+        ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS updated_by UUID;
+        ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS updated_by UUID;
+        
+        -- Atualizações de colunas da refatoração
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS actual_amount NUMERIC(14,2);
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS installment_number INTEGER;
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS total_installments INTEGER;
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS parent_transaction_id UUID REFERENCES public.transactions(id) ON DELETE SET NULL;
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS transfer_id UUID;
       `;
 
       await query(sql);
       await seedSuperAdmin();
-      console.log("Database initialized successfully!");
-    } else {
-      console.log("Database already initialized.");
+      console.log("Database initialized/verified successfully.");
     }
-  } catch (error) {
-    console.error("Failed to initialize database:", error);
+  } catch (err) {
+    console.error("Database initialization failed:", err);
   }
 }

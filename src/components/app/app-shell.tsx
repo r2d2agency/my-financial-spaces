@@ -155,7 +155,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="flex flex-col gap-1">
             {current && (
               <p className="px-1 text-[10px] uppercase font-bold tracking-wider text-muted-foreground/60">
-                Acesso: {current.role === 'owner' ? 'Proprietário' : current.role === 'admin' ? 'Administrador' : current.role === 'editor' ? 'Editor' : 'Visualizador'}
+                Acesso: {current.role === 'owner' ? 'Proprietário' : current.role === 'admin' ? 'Administrador' : current.role === 'manager' ? 'Gerente' : current.role === 'operator' ? 'Operador' : 'Visualizador'}
               </p>
             )}
             <Button 
