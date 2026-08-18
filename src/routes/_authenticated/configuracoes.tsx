@@ -201,133 +201,151 @@ function Configuracoes() {
           <CardDescription>Gerencie quem pode visualizar e operar este espaço.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider">Membros Ativos</h3>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {(data?.members ?? []).map((m: any) => (
-                <div key={m.user_id} className="flex flex-col gap-3 rounded-lg border border-border p-4 bg-card shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-semibold text-foreground line-clamp-1">{m.full_name || m.email}</p>
-                      <p className="text-xs text-muted-foreground truncate">{m.email}</p>
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
+            </div>
+          ) : isError ? (
+            <div className="rounded-lg bg-destructive/10 p-4 text-center">
+              <p className="text-sm text-destructive">Erro ao carregar membros: {error?.message}</p>
+              <Button variant="outline" size="sm" className="mt-2" onClick={() => qc.invalidateQueries({ queryKey: ["settings"] })}>Tentar novamente</Button>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider">Membros Ativos</h3>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {(data?.members ?? []).map((m: any) => (
+                    <div key={m.user_id} className="flex flex-col gap-3 rounded-lg border border-border p-4 bg-card shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between">
+                        <div className="max-w-[70%]">
+                          <p className="font-semibold text-foreground line-clamp-1" title={m.full_name || m.email}>{m.full_name || m.email}</p>
+                          <p className="text-xs text-muted-foreground truncate" title={m.email}>{m.email}</p>
+                        </div>
+                        <Badge variant={m.role === 'owner' ? 'default' : 'secondary'} className="capitalize shrink-0">
+                          {ROLES.find(r => r.value === m.role)?.label || m.role}
+                        </Badge>
+                      </div>
+                      
+                      {canManage && m.role !== 'owner' && (
+                        <div className="flex items-center gap-2 mt-auto pt-2 border-t border-border/50">
+                          <Select 
+                            value={m.role} 
+                            onValueChange={(v) => updateR.mutate({ userId: m.user_id, role: v as Role })}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ROLES.filter(r => r.value !== 'owner').map(r => (
+                                <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              if (confirm(`Remover acesso de ${m.full_name || m.email}?`)) {
+                                removeM.mutate(m.user_id);
+                              }
+                            }}
+                          >
+                            Remover
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                    <Badge variant={m.role === 'owner' ? 'default' : 'secondary'} className="capitalize shrink-0">
-                      {ROLES.find(r => r.value === m.role)?.label || m.role}
-                    </Badge>
-                  </div>
-                  
-                  {canManage && m.role !== 'owner' && (
-                    <div className="flex items-center gap-2 mt-auto pt-2 border-t border-border/50">
-                      <Select 
-                        value={m.role} 
-                        onValueChange={(v) => updateR.mutate({ userId: m.user_id, role: v as Role })}
-                      >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ROLES.filter(r => r.value !== 'owner').map(r => (
-                            <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => {
-                          if (confirm(`Remover acesso de ${m.full_name || m.email}?`)) {
-                            removeM.mutate(m.user_id);
-                          }
-                        }}
-                      >
-                        Remover
-                      </Button>
-                    </div>
-                  )}
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {(data?.invites?.length ?? 0) > 0 && (
-            <div className="space-y-4 pt-4 border-t border-border">
-              <h3 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider">Convites Pendentes</h3>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {data?.invites.map((i: any) => (
-                  <div key={i.id} className="flex flex-col gap-3 rounded-lg border border-dashed border-border p-4 bg-muted/20">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-medium text-foreground truncate">{i.email}</p>
-                        <p className="text-[10px] text-muted-foreground">Expira em {new Date(i.expires_at).toLocaleDateString()}</p>
-                      </div>
-                      <Badge variant="outline" className="capitalize shrink-0">
-                        {ROLES.find(r => r.value === i.role)?.label || i.role}
-                      </Badge>
-                    </div>
-                    {canManage && (
-                      <div className="flex items-center gap-2 mt-auto pt-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 text-xs"
-                          onClick={() => {
-                            const url = `${window.location.origin}/invite/${i.token}`;
-                            navigator.clipboard.writeText(url);
-                            toast.success("Link do convite copiado!");
-                          }}
-                        >
-                          Copiar Link
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => cancelI.mutate(i.id)}
-                        >
-                          Cancelar
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
               </div>
-            </div>
-          )}
 
-          {canManage && (
-            <div className="pt-6 border-t border-border">
-              <h3 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider mb-4">+ Adicionar membro</h3>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Input
-                  className="flex-1"
-                  placeholder="usuario@email.com"
-                  type="email"
-                  value={invite.email}
-                  onChange={(e) => setInvite((p) => ({ ...p, email: e.target.value }))}
-                />
-                <Select 
-                  value={invite.role} 
-                  onValueChange={(v) => setInvite((p) => ({ ...p, role: v as Role }))}
-                >
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Permissão" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROLES.filter((r) => r.value !== "owner").map((r) => (
-                      <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+              {(data?.invites?.length ?? 0) > 0 && (
+                <div className="space-y-4 pt-4 border-t border-border">
+                  <h3 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider">Convites Pendentes</h3>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {data?.invites.map((i: any) => (
+                      <div key={i.id} className="flex flex-col gap-3 rounded-lg border border-dashed border-border p-4 bg-muted/20">
+                        <div className="flex items-start justify-between">
+                          <div className="max-w-[70%]">
+                            <p className="font-medium text-foreground truncate" title={i.email}>{i.email}</p>
+                            <p className="text-[10px] text-muted-foreground">Expira em {new Date(i.expires_at).toLocaleDateString()}</p>
+                          </div>
+                          <Badge variant="outline" className="capitalize shrink-0">
+                            {ROLES.find(r => r.value === i.role)?.label || i.role}
+                          </Badge>
+                        </div>
+                        {canManage && (
+                          <div className="flex items-center gap-2 mt-auto pt-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 text-xs"
+                              onClick={() => {
+                                const url = `${window.location.origin}/invite/${i.token}`;
+                                navigator.clipboard.writeText(url);
+                                toast.success("Link do convite copiado!");
+                              }}
+                            >
+                              Copiar Link
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => cancelI.mutate(i.id)}
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     ))}
-                  </SelectContent>
-                </Select>
-                <Button 
-                  onClick={() => sendInvite.mutate()} 
-                  disabled={!invite.email || sendInvite.isPending}
-                  className="w-full sm:w-auto"
-                >
-                  {sendInvite.isPending ? "Enviando..." : "Enviar convite"}
-                </Button>
-              </div>
-            </div>
+                  </div>
+                </div>
+              )}
+
+              {canManage && (
+                <div className="pt-6 border-t border-border">
+                  <h3 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider mb-4">+ Adicionar membro</h3>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Input
+                      className="flex-1"
+                      placeholder="usuario@email.com"
+                      type="email"
+                      value={invite.email}
+                      onChange={(e) => setInvite((p) => ({ ...p, email: e.target.value }))}
+                    />
+                    <Select 
+                      value={invite.role} 
+                      onValueChange={(v) => setInvite((p) => ({ ...p, role: v as Role }))}
+                    >
+                      <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Permissão" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ROLES.filter((r) => r.value !== "owner").map((r) => (
+                          <SelectItem key={r.value} value={r.value}>
+                            <div className="flex flex-col gap-0.5">
+                              <span>{r.label}</span>
+                              <span className="text-[10px] text-muted-foreground font-normal">{(r as any).desc}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      onClick={() => sendInvite.mutate()} 
+                      disabled={!invite.email || sendInvite.isPending}
+                      className="w-full sm:w-auto"
+                    >
+                      {sendInvite.isPending ? "Enviando..." : "Enviar convite"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
