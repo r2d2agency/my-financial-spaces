@@ -96,6 +96,12 @@ export async function initializeDatabase() {
         END $$;
 
         DO $$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'recurring_frequency') THEN
+                CREATE TYPE public.recurring_frequency AS ENUM ('weekly','biweekly','monthly','bimonthly','quarterly','semi-annually','annually');
+            END IF;
+        END $$;
+
+        DO $$ BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'app_role') THEN
                 CREATE TYPE public.app_role AS ENUM ('platform_admin','support');
             END IF;
