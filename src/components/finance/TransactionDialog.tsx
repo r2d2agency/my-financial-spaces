@@ -204,15 +204,56 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
               </div>
             )}
 
+            {form.type === 'expense' && (
+              <div className="space-y-2">
+                <Label>Forma de Pagamento</Label>
+                <Tabs value={form.payment_method} onValueChange={(v) => setForm(f => ({ ...f, payment_method: v }))} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="account">Conta Bancária</TabsTrigger>
+                    <TabsTrigger value="credit_card">Cartão de Crédito</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label>{form.type === 'income' ? 'Conta de recebimento' : form.type === 'expense' ? 'Conta de pagamento' : 'Conta'}</Label>
-              <Input placeholder="Selecione conta..." value={form.account_id} onChange={e => setForm(f => ({ ...f, account_id: e.target.value }))} />
+              <Label>
+                {form.type === 'expense' && form.payment_method === 'credit_card' 
+                  ? 'Cartão' 
+                  : (form.type === 'income' ? 'Conta de recebimento' : form.type === 'expense' ? 'Conta de pagamento' : 'Conta')}
+              </Label>
+              
+              {form.type === 'expense' && form.payment_method === 'credit_card' ? (
+                <select 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={form.card_id}
+                  onChange={e => setForm(f => ({ ...f, card_id: e.target.value }))}
+                >
+                  <option value="">Selecione um cartão...</option>
+                  {meta?.cards.map((c: any) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <select 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={form.account_id}
+                  onChange={e => setForm(f => ({ ...f, account_id: e.target.value }))}
+                >
+                  <option value="">Selecione uma conta...</option>
+                  {meta?.accounts.map((a: any) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox id="liq" checked={form.is_liquidated} onCheckedChange={(v) => setForm(f => ({ ...f, is_liquidated: !!v }))} />
-              <Label htmlFor="liq">{form.type === 'income' ? 'Já recebi este valor' : 'Já paguei esta despesa'}</Label>
-            </div>
+            {!(form.type === 'expense' && form.payment_method === 'credit_card') && (
+              <div className="flex items-center space-x-2">
+                <Checkbox id="liq" checked={form.is_liquidated} onCheckedChange={(v) => setForm(f => ({ ...f, is_liquidated: !!v }))} />
+                <Label htmlFor="liq">{form.type === 'income' ? 'Já recebi este valor' : 'Já paguei esta despesa'}</Label>
+              </div>
+            )}
             
             <Button variant="ghost" className="w-full justify-between" onClick={() => setShowAdvanced(!showAdvanced)}>
               Mais opções {showAdvanced ? <ChevronDown className="rotate-180" /> : <ChevronDown />}
