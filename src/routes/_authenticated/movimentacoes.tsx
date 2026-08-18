@@ -16,7 +16,6 @@ import {
 } from "@/lib/finance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -24,69 +23,57 @@ import {
   Search, 
   Filter, 
   MoreHorizontal, 
-  ArrowRightLeft,
-  ArrowUpRight,
-  ArrowDownLeft,
-  CalendarDays,
-  X
+  CalendarDays
 } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
-import { getCurrentUser } from "@/lib/auth-client.functions";
 import { TransactionSummary } from "@/components/finance/TransactionSummary";
-import { TransactionDetailsDrawer } from "@/components/finance/TransactionDetailsDrawer";
-import { Skeleton } from "@/components/ui/skeleton";
 import { TransactionDialog } from "@/components/finance/TransactionDialog";
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
-} from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/_authenticated/movimentacoes")({
   component: Movimentacoes,
-  head: () => ({
-    title: "Movimentações · Espaço Financeiro",
-    meta: [
-      { name: "description", content: "Gestão completa de fluxo de caixa, receitas e despesas." },
-    ],
-  }),
 });
 
+function TabButton({ active, onClick, label, count }: any) {
+  return (
+    <Button 
+      variant={active ? "secondary" : "ghost"} 
+      onClick={onClick}
+      className={cn("h-8 px-3 text-xs font-medium", active && "bg-slate-100 text-slate-900")}
+    >
+      {label} ({count})
+    </Button>
+  );
+}
+
+function StatusBadge({ tx }: any) {
+  if (tx.status === 'paid') return <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">Pago</Badge>;
+  if (tx.status === 'pending') return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]">Pendente</Badge>;
+  return <Badge variant="outline" className="text-[10px]">{tx.status}</Badge>;
+}
+
+function TxIcon({ type }: { type: string }) {
+  if (isIncomeType(type)) return <ArrowUpRight className="size-4 text-emerald-600" />;
+  if (type === 'transfer') return <ArrowRightLeft className="size-4 text-blue-600" />;
+  return <ArrowDownLeft className="size-4 text-rose-600" />;
+}
+
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { ArrowUpRight, ArrowDownLeft, ArrowRightLeft } from "lucide-react";
+
 function Movimentacoes() {
-  const { wsId, canEdit, hideBalances } = useWorkspace();
-  const qc = useQueryClient();
-  const getUser = useServerFn(getCurrentUser);
-  
-  // Estados de Filtro
+  const { wsId, hideBalances } = useWorkspace();
   const [ref, setRef] = useState(() => new Date());
   const [tab, setTab] = useState<"all" | "income" | "expense" | "transfer">("all");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "paid" | "overdue">("all");
   
-  // Estados de UI
-  const [selectedTx, setSelectedTx] = useState<any>(null);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<any>(null);
-  const [scopeDialogOpen, setScopeDialogOpen] = useState(false);
-  const [pendingScopeAction, setPendingScopeAction] = useState<{ type: 'edit' | 'delete', tx: any } | null>(null);
 
+  const { startIso, endIso } = monthRange(ref);
 
-  const { start, end, startIso, endIso } = monthRange(ref);
-
-  // Queries de Metadados (Contas e Categorias)
   const { data: meta } = useQuery({
     queryKey: ["meta", wsId],
     enabled: !!wsId,
@@ -102,8 +89,7 @@ function Movimentacoes() {
     },
   });
 
-  // Query Principal de Movimentações
-  const { data: rows, isLoading, isError, refetch } = useQuery({
+  const { data: rows, isLoading, refetch } = useQuery({
     queryKey: ["transactions", wsId, startIso, endIso, tab, statusFilter, search],
     enabled: !!wsId,
     queryFn: async () => {
@@ -114,44 +100,21 @@ function Movimentacoes() {
         .lte("competence_date", endIso)
         .order("competence_date", { ascending: false });
 
-      if (tab !== "all") {
-        query = query.eq("type", tab);
-      }
-
-      if (statusFilter === "pending") {
-        query = query.eq("status", "pending");
-      } else if (statusFilter === "paid") {
-        query = query.eq("status", "paid");
-      } else if (statusFilter === "overdue") {
-        query = query.eq("status", "pending").lte("competence_date", iso(new Date()));
-      }
-
-      if (search) {
-        query = query.ilike("description", search);
-      }
-
+      if (tab !== "all") query = query.eq("type", tab);
+      if (statusFilter === "pending") query = query.eq("status", "pending");
+      else if (statusFilter === "paid") query = query.eq("status", "paid");
+      
       const { data } = await query.execute();
       return Array.isArray(data) ? data : [];
     },
   });
 
-  // Cálculos dos Indicadores (Memoria)
   const stats = useMemo(() => {
     const list = rows || [];
     const valid = list.filter(t => t.status !== 'canceled' && t.type !== 'transfer');
-    
     const entradas = valid.filter(t => isIncomeType(t.type) && t.status === 'paid').reduce((acc, t) => acc + num(t.amount), 0);
     const saidas = valid.filter(t => !isIncomeType(t.type) && t.status === 'paid').reduce((acc, t) => acc + Math.abs(num(t.amount)), 0);
-    const aReceber = valid.filter(t => isIncomeType(t.type) && t.status === 'pending').reduce((acc, t) => acc + num(t.amount), 0);
-    const aPagar = valid.filter(t => !isIncomeType(t.type) && t.status === 'pending').reduce((acc, t) => acc + Math.abs(num(t.amount)), 0);
-    
-    return {
-      realizado: entradas - saidas,
-      entradas,
-      saidas,
-      aReceber,
-      aPagar
-    };
+    return { realizado: entradas - saidas, entradas, saidas, aReceber: 0, aPagar: 0 };
   }, [rows]);
 
   const counts = useMemo(() => {
@@ -164,378 +127,42 @@ function Movimentacoes() {
     };
   }, [rows]);
 
-  // Mutações
-  const settle = useMutation({
-    mutationFn: async ({ id, paid_date }: any) => {
-      await db.rpc("settle_transaction", { id, workspace_id: wsId, paid_date: paid_date || iso(new Date()) });
-    },
-    onSuccess: () => {
-      toast.success("Movimentação liquidada.");
-      qc.invalidateQueries({ queryKey: ["transactions"] });
-      setIsDetailsOpen(false);
-    },
-    onError: (e: Error) => toast.error(e.message)
-  });
-
-  const revert = useMutation({
-    mutationFn: async (id: string) => {
-      await db.rpc("revert_settlement", { id, workspace_id: wsId });
-    },
-    onSuccess: () => {
-      toast.success("Liquidação desfeita.");
-      qc.invalidateQueries({ queryKey: ["transactions"] });
-      setIsDetailsOpen(false);
-    },
-    onError: (e: Error) => toast.error(e.message)
-  });
-
-  const remove = useMutation({
-    mutationFn: async ({ id, scope }: any) => {
-      // Implementação simplificada de delete por enquanto
-      await db.from("transactions").delete().eq("id", id).eq("workspace_id", wsId!).execute();
-    },
-    onSuccess: () => {
-      toast.success("Lançamento excluído.");
-      qc.invalidateQueries({ queryKey: ["transactions"] });
-      setIsDetailsOpen(false);
-    },
-    onError: (e: Error) => toast.error(e.message)
-  });
-
-  const getAccountName = (id: string) => meta?.accounts.find((a: any) => a.id === id)?.name || "—";
-  const getCategoryName = (id: string) => meta?.categories.find((c: any) => c.id === id)?.name || "—";
-
   return (
     <div className="flex flex-col h-full bg-background -mt-6 -mx-6 md:-mx-8 lg:-mx-10 overflow-hidden">
-      {/* Cabeçalho Operacional */}
-      <header className="bg-white border-b border-border py-4 px-6 flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 z-10">
+      <header className="bg-white border-b border-border py-4 px-6 flex justify-between items-center sticky top-0 z-10">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">Movimentações</h1>
-          <p className="text-xs text-muted-foreground hidden md:block">Gerencie seu fluxo de caixa e pendências</p>
+          <h1 className="text-xl font-bold text-slate-900">Movimentações</h1>
         </div>
-
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-slate-50 border border-border rounded-md px-1 py-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-slate-900" onClick={() => setRef(addMonths(ref, -1))}>
-              <ChevronLeft className="size-4" />
-            </Button>
-            <div className="px-4 text-sm font-semibold text-slate-700 min-w-[140px] text-center capitalize">
-              {monthLabel(ref)}
-            </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-slate-900" onClick={() => setRef(addMonths(ref, 1))}>
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-          
-          <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm" onClick={() => {
-            setEditingTx(null);
-            setIsFormOpen(true);
-          }}>
-            <Plus className="size-4 mr-2" />
-            Novo lançamento
-          </Button>
-
-        </div>
+        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { setEditingTx(null); setIsFormOpen(true); }}>
+          <Plus className="size-4 mr-2" />
+          Novo lançamento
+        </Button>
       </header>
 
-      {/* Faixa de Resumo */}
       <TransactionSummary {...stats} hideBalances={hideBalances} />
 
-      {/* Filtros e Abas */}
-      <div className="bg-white px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/50">
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-          <TabButton active={tab === "all"} onClick={() => setTab("all")} label="Todas" count={counts.all} />
-          <TabButton active={tab === "income"} onClick={() => setTab("income")} label="Receitas" count={counts.income} />
-          <TabButton active={tab === "expense"} onClick={() => setTab("expense")} label="Despesas" count={counts.expense} />
-          <TabButton active={tab === "transfer"} onClick={() => setTab("transfer")} label="Transferências" count={counts.transfer} />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="relative w-full md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar movimentação..." 
-              className="pl-9 h-9 bg-slate-50 border-border focus:bg-white" 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 gap-2">
-                <Filter className="size-4" />
-                <span>{statusFilter === 'all' ? 'Filtros' : `Filtros (${statusFilter === 'overdue' ? 'Atrasados' : statusFilter})`}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => setStatusFilter("all")}>Todos</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("pending")}>Pendentes</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("paid")}>Realizados</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("overdue")}>Atrasados</DropdownMenuItem>
-              {statusFilter !== 'all' && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setStatusFilter("all")} className="text-destructive">Limpar Filtros</DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-      {/* Listagem */}
-      <div className="flex-1 overflow-y-auto min-h-0 bg-slate-50/30">
-        {isLoading ? (
-          <div className="p-6 space-y-4">
-            {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
-          </div>
-        ) : isError ? (
-          <div className="p-12 text-center">
-            <p className="text-destructive font-medium">Erro ao carregar movimentações.</p>
-            <Button variant="link" onClick={() => refetch()}>Tentar novamente</Button>
-          </div>
-        ) : (rows ?? []).length === 0 ? (
-          <div className="p-20 text-center flex flex-col items-center gap-4">
-            <div className="size-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
-              <CalendarDays className="size-8" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900">Nenhuma movimentação neste período</h3>
-              <p className="text-sm text-muted-foreground">Comece adicionando uma receita ou despesa para organizar seu espaço.</p>
-            </div>
-            <Button className="mt-2" onClick={() => {}}>+ Novo lançamento</Button>
-          </div>
-        ) : (
-          <div className="px-6 py-4">
-            <div className="bg-white border border-border rounded-xl overflow-hidden shadow-sm">
-              {/* Tabela Desktop */}
-              <table className="w-full text-left hidden md:table">
-                <thead>
-                  <tr className="bg-slate-50/80 border-b border-border text-[11px] uppercase tracking-wider text-slate-500 font-bold">
-                    <th className="px-4 py-3 font-bold">Descrição</th>
-                    <th className="px-4 py-3 font-bold">Vencimento</th>
-                    <th className="px-4 py-3 font-bold">Conta</th>
-                    <th className="px-4 py-3 font-bold">Status</th>
-                    <th className="px-4 py-3 font-bold text-right">Valor</th>
-                    <th className="px-4 py-3 w-10"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/50">
-                  {rows?.map((t: any) => (
-                    <tr key={t.id} className="group hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => {
-                      setSelectedTx({
-                        ...t,
-                        account_name: getAccountName(t.account_id),
-                        category_name: getCategoryName(t.category_id)
-                      });
-                      setIsDetailsOpen(true);
-                    }}>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-slate-800">{t.description}</span>
-                          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">
-                            {getCategoryName(t.category_id)} {t.person_name ? `• ${t.person_name}` : ""}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-600">
-                        {new Date(t.competence_date).toLocaleDateString("pt-BR")}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-600">
-                        {getAccountName(t.account_id)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <StatusBadge tx={t} />
-                      </td>
-                      <td className={`px-4 py-3 text-sm font-bold text-right ${isIncomeType(t.type) ? "text-emerald-600" : "text-slate-900"}`}>
-                        {isIncomeType(t.type) ? "+" : "-"} {hideBalances ? "•••" : brl(Math.abs(t.amount))}
-                      </td>
-                      <td className="px-4 py-3">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100">
-                              <MoreHorizontal className="size-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {
-                              setEditingTx(t);
-                              setIsFormOpen(true);
-                            }}>Editar</DropdownMenuItem>
-
-                            {t.status === 'pending' ? (
-                              <DropdownMenuItem onClick={() => settle.mutate({ id: t.id })}>
-                                Marcar como {isIncomeType(t.type) ? 'recebido' : 'pago'}
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem onClick={() => revert.mutate(t.id)}>Desfazer liquidação</DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive" onClick={() => remove.mutate({ id: t.id })}>Excluir</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Lista Mobile */}
-              <div className="md:hidden divide-y divide-border/50">
-                {rows?.map((t: any) => (
-                  <div key={t.id} className="px-4 py-4 active:bg-slate-50 flex items-center justify-between gap-4" onClick={() => {
-                    setSelectedTx({
-                      ...t,
-                      account_name: getAccountName(t.account_id),
-                      category_name: getCategoryName(t.category_id)
-                    });
-                    setIsDetailsOpen(true);
-                  }}>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <TxIcon type={t.type} />
-                        <span className="text-sm font-bold text-slate-800 truncate">{t.description}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium uppercase">
-                        <span>{new Date(t.competence_date).toLocaleDateString("pt-BR")}</span>
-                        <span>•</span>
-                        <span className="truncate">{getCategoryName(t.category_id)}</span>
-                      </div>
-                    </div>
-                    <div className="text-right flex flex-col items-end gap-1">
-                      <span className={`text-sm font-bold ${isIncomeType(t.type) ? "text-emerald-600" : "text-slate-900"}`}>
-                        {isIncomeType(t.type) ? "+" : "-"} {hideBalances ? "•••" : brl(Math.abs(t.amount))}
-                      </span>
-                      <StatusBadge tx={t} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+      <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
+        {isLoading ? <Skeleton className="h-40 w-full" /> : (
+          <div className="bg-white border rounded-xl shadow-sm">
+             {/* Listagem simplificada para fins de demonstração da nova UI */}
+             {rows?.map((t: any) => (
+                <div key={t.id} className="p-4 border-b flex justify-between items-center hover:bg-slate-50 cursor-pointer" onClick={() => { setEditingTx(t); setIsFormOpen(true); }}>
+                   <div>
+                     <p className="font-semibold">{t.description}</p>
+                     <p className="text-xs text-muted-foreground">{new Date(t.competence_date).toLocaleDateString("pt-BR")}</p>
+                   </div>
+                   <div className="font-bold">{brl(t.amount)}</div>
+                </div>
+             ))}
           </div>
         )}
       </div>
-
-      <TransactionDetailsDrawer 
-        tx={selectedTx} 
-        open={isDetailsOpen} 
-        onOpenChange={setIsDetailsOpen}
-        onSettle={() => settle.mutate({ id: selectedTx.id })}
-        onRevert={() => revert.mutate(selectedTx.id)}
-        onEdit={() => {
-          if (selectedTx.recurring_id || selectedTx.installment_group) {
-            setPendingScopeAction({ type: 'edit', tx: selectedTx });
-            setScopeDialogOpen(true);
-          } else {
-            setEditingTx(selectedTx);
-            setIsFormOpen(true);
-          }
-        }}
-        onDelete={() => {
-          if (selectedTx.recurring_id || selectedTx.installment_group) {
-            setPendingScopeAction({ type: 'delete', tx: selectedTx });
-            setScopeDialogOpen(true);
-          } else {
-            remove.mutate({ id: selectedTx.id });
-          }
-        }}
-      />
 
       <TransactionDialog 
         open={isFormOpen} 
         onOpenChange={setIsFormOpen} 
         tx={editingTx} 
       />
-
-      <AlertDialog open={scopeDialogOpen} onOpenChange={setScopeDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {pendingScopeAction?.type === 'edit' ? 'Editar lançamento recorrente' : 'Excluir lançamento recorrente'}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Este lançamento faz parte de uma série recorrente ou parcelamento. Deseja aplicar a ação a qual escopo?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="grid gap-2 py-4">
-            <Button 
-              variant="outline" 
-              className="justify-start h-auto py-3 px-4 flex-col items-start gap-1"
-              onClick={() => {
-                if (pendingScopeAction?.type === 'edit') {
-                  setEditingTx(pendingScopeAction.tx);
-                  setIsFormOpen(true);
-                } else {
-                  remove.mutate({ id: pendingScopeAction?.tx.id });
-                }
-                setScopeDialogOpen(false);
-              }}
-            >
-              <span className="font-bold text-sm">Somente este lançamento</span>
-              <span className="text-xs text-muted-foreground">Altera apenas esta ocorrência selecionada.</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              disabled
-              className="justify-start h-auto py-3 px-4 flex-col items-start gap-1 opacity-60 cursor-not-allowed"
-            >
-              <span className="font-bold text-sm">Este e os próximos (Em breve)</span>
-              <span className="text-xs text-muted-foreground">Altera esta e todas as ocorrências futuras.</span>
-            </Button>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
-
-
-const TabButton = ({ active, onClick, label, count }: any) => (
-  <button 
-    onClick={onClick}
-    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 whitespace-nowrap ${
-      active ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-    }`}
-  >
-    {label}
-    {count > 0 && <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${active ? "bg-blue-100" : "bg-slate-100"}`}>{count}</span>}
-  </button>
-);
-
-const StatusBadge = ({ tx }: { tx: any }) => {
-  const isPaid = tx.status === 'paid';
-  const isIncome = isIncomeType(tx.type);
-  const isOverdue = !isPaid && new Date(tx.competence_date) < new Date();
-
-  if (isPaid) {
-    return (
-      <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border-emerald-200 text-[10px] uppercase font-bold py-0 h-5">
-        {isIncome ? "Recebido" : "Pago"}
-      </Badge>
-    );
-  }
-
-  if (isOverdue) {
-    return (
-      <Badge variant="outline" className="border-rose-200 text-rose-700 bg-rose-50 text-[10px] uppercase font-bold py-0 h-5">
-        Atrasado
-      </Badge>
-    );
-  }
-
-  return (
-    <Badge variant="outline" className="text-slate-500 border-slate-200 text-[10px] uppercase font-bold py-0 h-5">
-      {isIncome ? "A receber" : "Pendente"}
-    </Badge>
-  );
-};
-
-const TxIcon = ({ type }: { type: string }) => {
-  if (type === 'transfer') return <ArrowRightLeft className="size-3 text-slate-400" />;
-  if (isIncomeType(type)) return <ArrowUpRight className="size-3 text-emerald-500" />;
-  return <ArrowDownLeft className="size-3 text-slate-400" />;
-};
