@@ -369,9 +369,14 @@ function Configuracoes() {
               </p>
               <p>
                 Status: {data.sub.status} · válido até{" "}
-                {data.sub.current_period_end instanceof Date 
-                  ? data.sub.current_period_end.toLocaleDateString("pt-BR")
-                  : (typeof data.sub.current_period_end === 'string' ? data.sub.current_period_end.split("-").reverse().join("/") : "—")}
+                {data.sub.current_period_end ? (
+                  data.sub.current_period_end instanceof Date 
+                    ? data.sub.current_period_end.toLocaleDateString("pt-BR")
+                    : (typeof data.sub.current_period_end === 'string' && data.sub.current_period_end.includes("-")
+                        ? data.sub.current_period_end.split("-").reverse().join("/") 
+                        : String(data.sub.current_period_end))
+                ) : "—"}
+
               </p>
             </>
           ) : (
