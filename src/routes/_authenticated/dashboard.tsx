@@ -24,9 +24,10 @@ function Dashboard() {
   const [period, setPeriod] = useState({ month: new Date().getMonth() + 1, year: new Date().getFullYear() });
   const dbRpc = useServerFn(dbQuery);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["dashboard", wsId, period],
     enabled: !!wsId,
+    retry: false,
     queryFn: async () => {
       const summary = await dbRpc({
         data: {
@@ -48,18 +49,31 @@ function Dashboard() {
     },
   });
 
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold">Visão geral</h1>
+        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-6 space-y-3">
+          <p className="font-semibold text-destructive">Não foi possível carregar o dashboard</p>
+          <p className="text-sm text-destructive/80">{(error as Error).message}</p>
+          <Button variant="outline" onClick={() => refetch()}>Tentar novamente</Button>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) return <div className="space-y-4"><Skeleton className="h-32 w-full" /><Skeleton className="h-64 w-full" /></div>;
 
-  const { summary, cashFlow } = data || {};
-  const { alerts, summary: indicators, upcoming, accounts, cards, top_categories } = summary || { 
-    alerts: { overdue_count: 0, overdue_amount: 0, soon_count: 0 },
-    summary: { total_balance: 0, income: 0, expense: 0, result: 0, to_receive: 0, to_pay: 0, prev_income: 0, prev_expense: 0 },
-    upcoming: [],
-    accounts: [],
-    cards: [],
-    top_categories: []
-  };
-  const { history = [], projections = [] } = cashFlow || {};
+  const summary: any = (data as any)?.summary ?? {};
+  const cashFlow: any = (data as any)?.cashFlow ?? {};
+  const alerts = summary.alerts ?? { overdue_count: 0, overdue_amount: 0, soon_count: 0 };
+  const indicators = summary.summary ?? { total_balance: 0, income: 0, expense: 0, result: 0, to_receive: 0, to_pay: 0, prev_income: 0, prev_expense: 0 };
+  const upcoming: any[] = summary.upcoming ?? [];
+  const accounts: any[] = summary.accounts ?? [];
+  const cards: any[] = summary.cards ?? [];
+  const top_categories: any[] = summary.top_categories ?? [];
+  const history: any[] = cashFlow.history ?? [];
+  const projections: any[] = cashFlow.projections ?? [];
   
   return (
     <div className="space-y-6">
