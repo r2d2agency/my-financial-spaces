@@ -80,7 +80,8 @@ export async function initializeDatabase() {
             email TEXT UNIQUE,
             password_hash TEXT,
             raw_user_meta_data JSONB DEFAULT '{}'::jsonb,
-            created_at TIMESTAMPTZ DEFAULT NOW()
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            must_change_password BOOLEAN DEFAULT FALSE
         );
 
         -- 2. SCHEMAS E ENUMS
