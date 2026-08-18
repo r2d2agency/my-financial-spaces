@@ -276,7 +276,7 @@ function Configuracoes() {
                         <div className="flex items-start justify-between">
                           <div className="max-w-[70%]">
                             <p className="font-medium text-foreground truncate" title={i.email}>{i.email}</p>
-                            <p className="text-[10px] text-muted-foreground">Expira em {new Date(i.expires_at).toLocaleDateString()}</p>
+                            {i.expires_at && <p className="text-[10px] text-muted-foreground">Expira em {new Date(i.expires_at).toLocaleDateString()}</p>}
                           </div>
                           <Badge variant="outline" className="capitalize shrink-0">
                             {ROLES.find(r => r.value === i.role)?.label || i.role}
