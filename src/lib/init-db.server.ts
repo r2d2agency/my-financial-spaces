@@ -135,7 +135,12 @@ export async function initializeDatabase() {
 
         DO $$ BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'invite_status') THEN
-                CREATE TYPE public.invite_status AS ENUM ('pending','accepted','revoked');
+                CREATE TYPE public.invite_status AS ENUM ('pending','accepted','revoked', 'expired', 'cancelled');
+            ELSE
+                ALTER TYPE public.invite_status ADD VALUE IF NOT EXISTS 'accepted';
+                ALTER TYPE public.invite_status ADD VALUE IF NOT EXISTS 'revoked';
+                ALTER TYPE public.invite_status ADD VALUE IF NOT EXISTS 'expired';
+                ALTER TYPE public.invite_status ADD VALUE IF NOT EXISTS 'cancelled';
             END IF;
         END $$;
 
