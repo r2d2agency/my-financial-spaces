@@ -76,7 +76,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       current,
       wsId,
       role,
-      canEdit: role === "owner" || role === "admin" || role === "editor",
+      canEdit: role === "owner" || role === "admin" || role === "manager" || role === "operator",
       canManage: role === "owner" || role === "admin",
       isOwner: role === "owner",
       hideBalances: !!current?.hide_balances,
