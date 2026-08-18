@@ -151,7 +151,7 @@ function Cartoes() {
         )}
 
         {cards?.map((card) => {
-          const used = 0; // Mock temporário
+          const used = num(card.used_amount);
           const limit = num(card.credit_limit);
           const pct = limit > 0 ? (used / limit) * 100 : 0;
           
