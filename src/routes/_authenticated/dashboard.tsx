@@ -27,16 +27,20 @@ function Dashboard() {
     enabled: !!wsId,
     queryFn: async () => {
       const summary = await dbRpc({
-        action: "rpc",
-        table: "transactions",
-        rpcName: "get_dashboard_summary",
-        rpcArgs: { workspace_id: wsId, month: period.month, year: period.year }
+        data: {
+          action: "rpc",
+          table: "transactions",
+          rpcName: "get_dashboard_summary",
+          rpcArgs: { workspace_id: wsId, month: period.month, year: period.year }
+        }
       });
       const cashFlow = await dbRpc({
-        action: "rpc",
-        table: "transactions",
-        rpcName: "get_dashboard_cash_flow",
-        rpcArgs: { workspace_id: wsId }
+        data: {
+          action: "rpc",
+          table: "transactions",
+          rpcName: "get_dashboard_cash_flow",
+          rpcArgs: { workspace_id: wsId }
+        }
       });
       return { summary, cashFlow };
     },
