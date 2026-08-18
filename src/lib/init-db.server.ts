@@ -243,14 +243,30 @@ export async function initializeDatabase() {
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
           name TEXT NOT NULL,
+          institution TEXT,
+          last_digits TEXT,
           brand TEXT,
           credit_limit NUMERIC(14,2) NOT NULL DEFAULT 0,
           closing_day INTEGER NOT NULL DEFAULT 1,
           due_day INTEGER NOT NULL DEFAULT 10,
-          holder_name TEXT,
+          default_payment_account_id UUID REFERENCES public.financial_accounts(id) ON DELETE SET NULL,
           archived BOOLEAN NOT NULL DEFAULT false,
           created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
           updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS public.credit_card_invoices (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+          card_id UUID NOT NULL REFERENCES public.credit_cards(id) ON DELETE CASCADE,
+          period_month INTEGER NOT NULL,
+          period_year INTEGER NOT NULL,
+          closing_date DATE NOT NULL,
+          due_date DATE NOT NULL,
+          status public.tx_status NOT NULL DEFAULT 'pending', -- pending, paid, overdue
+          total_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          UNIQUE (card_id, period_month, period_year)
         );
 
         CREATE TABLE IF NOT EXISTS public.transactions (
