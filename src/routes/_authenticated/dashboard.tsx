@@ -80,7 +80,7 @@ function Dashboard() {
                   {summary.alerts.overdue_count} lançamentos estão vencidos, totalizando {brl(summary.alerts.overdue_amount)}.
                 </p>
               </div>
-              <Link to="/movimentacoes" search={{}} className="absolute inset-0 z-10" />
+              <Link to="/movimentacoes" search={{ account_id: undefined, card_id: undefined }} className="absolute inset-0 z-10" />
             </div>
           )}
           {summary.alerts.soon_count > 0 && (
