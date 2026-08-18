@@ -1,4 +1,47 @@
 import { query } from "./db.server";
+import { hashPassword } from "./crypto.server";
+
+/**
+ * Cria (ou garante) o superadmin definido por variáveis de ambiente.
+ * SUPERADMIN_EMAIL / SUPERADMIN_PASSWORD
+ * O usuário criado nasce com must_change_password = true, ou seja,
+ * na primeira entrada o sistema exige a definição de uma nova senha.
+ */
+async function seedSuperAdmin() {
+  const email = (process.env["SUPERADMIN_EMAIL"] || "tnicodemos@gmail.com").trim().toLowerCase();
+  const password = process.env["SUPERADMIN_PASSWORD"] || "Admin@123";
+  const name = process.env["SUPERADMIN_NAME"] || "Super Admin";
+
+  const existing = await query("SELECT id FROM auth.users WHERE lower(email) = $1", [email]);
+  let userId: string;
+
+  if (existing.rows.length > 0) {
+    userId = existing.rows[0].id;
+  } else {
+    const pwHash = await hashPassword(password);
+    const res = await query(
+      `INSERT INTO auth.users (email, password_hash, raw_user_meta_data, must_change_password)
+       VALUES ($1, $2, $3, true) RETURNING id`,
+      [email, pwHash, JSON.stringify({ full_name: name })]
+    );
+    userId = res.rows[0].id;
+    console.log(`Superadmin criado: ${email} (troca de senha obrigatória no primeiro acesso)`);
+  }
+
+  await query(
+    `INSERT INTO public.profiles (id, full_name, email)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email`,
+    [userId, name, email]
+  );
+
+  await query(
+    `INSERT INTO public.user_roles (user_id, role)
+     VALUES ($1, 'platform_admin')
+     ON CONFLICT (user_id, role) DO NOTHING`,
+    [userId]
+  );
+}
 
 export async function initializeDatabase() {
   console.log("Checking database initialization...");
@@ -504,6 +547,7 @@ export async function initializeDatabase() {
       `;
 
       await query(sql);
+      await seedSuperAdmin();
       console.log("Database initialized successfully!");
     } else {
       console.log("Database already initialized.");
