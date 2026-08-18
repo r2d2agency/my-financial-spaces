@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { brl, isIncomeType, TX_TYPES } from "@/lib/finance";
 import { Calendar, CreditCard, User, Tag, Clock, Wallet, FileText, Trash2, Edit } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const TransactionDetailsDrawer = ({ tx, open, onOpenChange, onSettle, onRevert, onEdit, onDelete }: any) => {
   if (!tx) return null;
