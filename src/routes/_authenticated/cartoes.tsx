@@ -75,7 +75,7 @@ function Cartoes() {
         closing_day: Number(f.closing_day) || 5,
         due_day: Number(f.due_day) || 15,
         default_payment_account_id: f.default_payment_account_id || null,
-      }).execute();
+      });
       if (error) throw error;
     },
     onSuccess: () => {
