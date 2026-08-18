@@ -589,6 +589,8 @@ export async function initializeDatabase() {
         ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS total_installments INTEGER;
         ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS parent_transaction_id UUID REFERENCES public.transactions(id) ON DELETE SET NULL;
         ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS transfer_id UUID;
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS notes TEXT;
+        ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS notes TEXT;
       `;
 
       await query(sql);
