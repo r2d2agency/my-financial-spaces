@@ -395,6 +395,51 @@ export async function initializeDatabase() {
           created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
 
+        CREATE TABLE IF NOT EXISTS public.contacts (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          trade_name TEXT,
+          person_type TEXT DEFAULT 'PF', -- PF, PJ
+          document TEXT,
+          email TEXT,
+          phone TEXT,
+          notes TEXT,
+          status TEXT DEFAULT 'active', -- active, archived
+          is_client BOOLEAN DEFAULT false,
+          is_provider BOOLEAN DEFAULT false,
+          created_at TIMESTAMPTZ DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS public.cost_centers (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          description TEXT,
+          code TEXT,
+          status TEXT DEFAULT 'active',
+          created_at TIMESTAMPTZ DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS public.tags (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          created_at TIMESTAMPTZ DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS public.transaction_tags (
+          transaction_id UUID NOT NULL REFERENCES public.transactions(id) ON DELETE CASCADE,
+          tag_id UUID NOT NULL REFERENCES public.tags(id) ON DELETE CASCADE,
+          PRIMARY KEY (transaction_id, tag_id)
+        );
+
+        ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS contact_id UUID REFERENCES public.contacts(id) ON DELETE SET NULL;
+        ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS cost_center_id UUID REFERENCES public.cost_centers(id) ON DELETE SET NULL;
+        ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS contact_id UUID REFERENCES public.contacts(id) ON DELETE SET NULL;
+
+
         CREATE TABLE IF NOT EXISTS public.platform_configs (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           key TEXT UNIQUE NOT NULL,

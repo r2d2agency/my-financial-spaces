@@ -31,15 +31,16 @@ import {
   ShieldCheck,
   Tag,
   Users,
+  Layers,
 } from "lucide-react";
+
 import { QuickTransaction } from "./quick-transaction";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/movimentacoes", label: "Movimentações", icon: ArrowLeftRight },
   { to: "/contas", label: "Contas", icon: Wallet },
-  { to: "/categorias", label: "Categorias", icon: Tag },
-  { to: "/clientes", label: "Clientes/Fornecedores", icon: Users },
+  { to: "/cadastros/contatos", label: "Cadastros", icon: Layers },
   { to: "/casa", label: "Casa e Família", icon: Home },
   { to: "/cartoes", label: "Cartões", icon: CreditCard },
   { to: "/dividas", label: "Dívidas", icon: TrendingDown },
@@ -48,6 +49,7 @@ const nav = [
   { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/configuracoes", label: "Configurações", icon: Settings },
 ] as const;
+
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { memberships, wsId, setWsId, current } = useWorkspace();
