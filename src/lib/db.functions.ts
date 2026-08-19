@@ -457,7 +457,7 @@ export const dbQuery = createServerFn({ method: "POST" })
             `SELECT 
               COUNT(CASE WHEN status = 'pending' AND due_date < $2 THEN 1 END) as overdue_count,
               COALESCE(SUM(CASE WHEN status = 'pending' AND due_date < $2 THEN ABS(amount) ELSE 0 END), 0) as overdue_amount,
-              COUNT(CASE WHEN status = 'pending' AND type IN ('expense', 'fixed_expense') AND due_date BETWEEN $2 AND (CURRENT_DATE + interval '7 days') THEN 1 END) as soon_count
+              COUNT(CASE WHEN status = 'pending' AND type IN ('expense', 'fixed_expense', 'expense'::text, 'fixed_expense'::text) AND due_date BETWEEN $2 AND (CURRENT_DATE + interval '7 days') THEN 1 END) as soon_count
              FROM public.transactions 
              WHERE workspace_id = $1`,
             [workspace_id, today]
