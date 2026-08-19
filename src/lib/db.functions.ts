@@ -649,20 +649,6 @@ export const dbQuery = createServerFn({ method: "POST" })
           }
           return results;
         }
-      } catch (rpcErr) {
-        console.error(`RPC Error (${data.rpcName}):`, rpcErr);
-        if (rpcErr instanceof Error) {
-          throw new Error(`Erro no Banco: ${rpcErr.message}`);
-        }
-        throw rpcErr;
-      }
-    }
-
-    if (data.action === "rpc") {
-      try {
-        // ... (existing rpcs)
-        
-        // Etapa 7: Cadastros
         if (data.rpcName === "list_contacts") {
           const { workspace_id } = data.rpcArgs;
           await verifyAuth(workspace_id);
@@ -717,7 +703,9 @@ export const dbQuery = createServerFn({ method: "POST" })
         throw rpcErr;
       }
     }
+
     throw new Error("Ação não suportada");
+
 
   });
 
