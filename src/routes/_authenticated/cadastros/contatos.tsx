@@ -24,12 +24,12 @@ function ContatosPage() {
 
   const { data: contacts, isLoading } = useQuery({
     queryKey: ["contacts", wsId],
-    queryFn: () => dbQuery({ table: "contacts", action: "rpc", rpcName: "list_contacts", rpcArgs: { workspace_id: wsId } }),
+    queryFn: () => dbQuery({ action: "rpc", rpcName: "list_contacts", rpcArgs: { workspace_id: wsId } }),
     enabled: !!wsId,
   });
 
   const saveMutation = useMutation({
-    mutationFn: (data: any) => dbQuery({ table: "contacts", action: "rpc", rpcName: "save_contact", rpcArgs: { ...data, workspace_id: wsId } }),
+    mutationFn: (data: any) => dbQuery({ action: "rpc", rpcName: "save_contact", rpcArgs: { ...data, workspace_id: wsId } }),
     onSuccess: () => { 
       qc.invalidateQueries({ queryKey: ["contacts"] }); 
       setOpen(false); 
