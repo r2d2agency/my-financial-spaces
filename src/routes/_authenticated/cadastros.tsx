@@ -24,7 +24,7 @@ function CadastrosLayout() {
   return (
     <div className="flex flex-col h-full bg-background -mt-6 -mx-6 md:-mx-8 lg:-mx-10 overflow-hidden">
       <header className="bg-white border-b border-border py-4 px-6 flex items-center gap-4 sticky top-0 z-10">
-        <Link to="/_authenticated/dashboard">
+        <Link to="/dashboard">
           <Button variant="ghost" size="icon" className="rounded-full">
             <ArrowLeft className="size-5" />
           </Button>
