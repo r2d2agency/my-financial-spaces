@@ -444,8 +444,8 @@ export const dbQuery = createServerFn({ method: "POST" })
           // 3. Indicadores do Mês Anterior (para comparação)
           const prevIndicators = await query(
             `SELECT 
-              COALESCE(SUM(CASE WHEN type IN ('income', 'extra_income') AND status = 'paid' THEN amount ELSE 0 END), 0) as income,
-              COALESCE(SUM(CASE WHEN type IN ('expense', 'fixed_expense') AND status = 'paid' THEN amount ELSE 0 END), 0) as expense
+              COALESCE(SUM(CASE WHEN type IN ('income', 'extra_income', 'income'::text, 'extra_income'::text) AND status = 'paid' THEN amount ELSE 0 END), 0) as income,
+              COALESCE(SUM(CASE WHEN type IN ('expense', 'fixed_expense', 'expense'::text, 'fixed_expense'::text) AND status = 'paid' THEN amount ELSE 0 END), 0) as expense
              FROM public.transactions 
              WHERE workspace_id = $1 AND competence_date BETWEEN $2 AND $3`,
             [workspace_id, isoPrevStart, isoPrevEnd]
