@@ -503,7 +503,7 @@ export const dbQuery = createServerFn({ method: "POST" })
             `SELECT c.name, COALESCE(SUM(ABS(t.amount)), 0) as total
              FROM public.transactions t
              JOIN public.categories c ON t.category_id = c.id
-             WHERE t.workspace_id = $1 AND t.type IN ('expense', 'fixed_expense') AND t.status = 'paid'
+             WHERE t.workspace_id = $1 AND t.type::text IN ('expense', 'fixed_expense') AND t.status = 'paid'
                AND t.competence_date BETWEEN $2 AND $3
              GROUP BY c.name ORDER BY total DESC LIMIT 5`,
             [workspace_id, isoStart, isoEnd]
