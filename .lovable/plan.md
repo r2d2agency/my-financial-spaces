@@ -6,7 +6,7 @@ Esta etapa reorganiza Clientes, Fornecedores, Categorias, Centros de Custo e Tag
 
 ### Novas Tabelas e Estruturas
 - **public.contacts**: Tabela unificada para Clientes e Fornecedores.
-  - Campos: `id`, `workspace_id`, `name`, `trade_name`, `type` (PF/PJ), `document` (CPF/CNPJ), `email`, `phone`, `notes`, `status` (active/archived), `is_client` (bool), `is_provider` (bool).
+  - Campos: `id`, `workspace_id`, `name`, `trade_name`, `person_type` (PF/PJ), `document`, `email`, `phone`, `notes`, `status` (active/archived), `is_client`, `is_provider`.
 - **public.cost_centers**: Centros de custo.
   - Campos: `id`, `workspace_id`, `name`, `description`, `code`, `status` (active/archived).
 - **public.tags**: Tags flexíveis.
@@ -16,36 +16,33 @@ Esta etapa reorganiza Clientes, Fornecedores, Categorias, Centros de Custo e Tag
 
 ### Alterações em Tabelas Existentes
 - **public.categories**: Adicionar `status` (active/archived).
-- **public.transactions**: Adicionar `contact_id` (FK para contacts), `cost_center_id` (FK para cost_centers).
-- **public.recurring_transactions**: Garantir `contact_id`, `cost_center_id`.
+- **public.transactions**: Adicionar `contact_id`, `cost_center_id`.
+- **public.recurring_transactions**: Adicionar `contact_id`, `cost_center_id`.
 
 ## 2. Server Functions (RPCs)
-- Refatorar `dbQuery` para suportar as novas tabelas.
-- Criar RPCs específicas se necessário para buscas otimizadas e criação rápida.
+- Refatorar `dbQuery` para suportar as novas tabelas e filtros.
+- Garantir que as queries respeitem o `workspace_id`.
 
 ## 3. Interface (Frontend)
 
 ### Módulo de Cadastros (`/cadastros`)
-- Criar rota unificada `/cadastros` com subnavegação:
-  - **Contatos**: Gestão de Clientes e Fornecedores (Filtros: Todos, Clientes, Fornecedores, Arquivados).
-  - **Categorias**: Hierarquia de Receitas e Despesas.
-  - **Centros de Custo**: Listagem moderna.
-  - **Tags**: Gestão simples de etiquetas.
+- Criar rota unificada `/cadastros` com abas para:
+  - **Contatos**: Listagem de Clientes e Fornecedores com filtros.
+  - **Categorias**: Organização de Receitas e Despesas.
+  - **Centros de Custo**: Listagem e edição.
+  - **Tags**: Gestão simplificada.
 
 ### Integração com Lançamentos
 - **TransactionDialog**:
-  - Substituir campo de texto de Cliente/Fornecedor por Search/Select de `contacts`.
-  - Adicionar suporte a `cost_center_id`.
-  - Adicionar seletor múltiplo para `tags`.
-  - Implementar "Criação Rápida" para Contatos, Categorias e Centros de Custo diretamente no diálogo.
+  - Seletor de Contato (Cliente/Fornecedor) com busca.
+  - Seletor de Centro de Custo.
+  - Seletor múltiplo de Tags.
+  - Atalhos para criação rápida de novos registros.
 
-### Detalhes e Filtros
-- Tela de detalhes do Contato com histórico de movimentações.
-- Integração de filtros de Contato, Centro de Custo e Tags na tela de Movimentações.
+### Detalhes do Contato
+- Visualização de histórico financeiro por contato (Entradas/Saídas/Saldo).
 
 ## Detalhes Técnicos
-- **Normalização**: Máscaras para CPF/CNPJ e Telefone no frontend; armazenamento limpo no banco.
-- **Segurança**: RLS estrito por `workspace_id` em todas as novas tabelas e relacionamentos.
-- **Arquivamento**: Implementar lógica de arquivamento em vez de exclusão para registros com histórico.
-- **Multi-tenant**: Garantir isolamento total entre workspaces.
-
+- **Segurança**: RLS em todas as tabelas.
+- **UX**: Máscaras de entrada e feedback visual de status.
+- **Arquivamento**: Impede a exclusão de registros com histórico, permitindo apenas o arquivamento.
