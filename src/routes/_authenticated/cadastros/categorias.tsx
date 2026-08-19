@@ -23,12 +23,12 @@ function CategoriasPage() {
 
   const { data: categories, isLoading } = useQuery({
     queryKey: ["categories", wsId],
-    queryFn: () => dbQuery({ data: { action: "rpc", rpcName: "list_categories", rpcArgs: { workspace_id: wsId } } }),
+    queryFn: () => dbQuery.data({ table: "categories", action: "rpc", rpcName: "list_categories", rpcArgs: { workspace_id: wsId } }),
     enabled: !!wsId,
   });
 
   const saveMutation = useMutation({
-    mutationFn: (args: any) => dbQuery({ data: { action: "rpc", rpcName: "save_category", rpcArgs: { ...args, workspace_id: wsId } } }),
+    mutationFn: (args: any) => dbQuery.data({ table: "categories", action: "rpc", rpcName: "save_category", rpcArgs: { ...args, workspace_id: wsId } }),
     onSuccess: () => { 
       qc.invalidateQueries({ queryKey: ["categories"] }); 
       setOpen(false); 
