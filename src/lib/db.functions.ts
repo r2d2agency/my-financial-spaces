@@ -548,8 +548,8 @@ export const dbQuery = createServerFn({ method: "POST" })
 
             const res = await query(
               `SELECT 
-                COALESCE(SUM(CASE WHEN type IN ('income', 'extra_income') AND status = 'paid' THEN amount ELSE 0 END), 0) as income,
-                COALESCE(SUM(CASE WHEN type IN ('expense', 'fixed_expense') AND status = 'paid' THEN amount ELSE 0 END), 0) as expense
+                COALESCE(SUM(CASE WHEN type::text IN ('income', 'extra_income') AND status = 'paid' THEN amount ELSE 0 END), 0) as income,
+                COALESCE(SUM(CASE WHEN type::text IN ('expense', 'fixed_expense') AND status = 'paid' THEN amount ELSE 0 END), 0) as expense
                FROM public.transactions 
                WHERE workspace_id = $1 AND competence_date BETWEEN $2 AND $3`,
               [workspace_id, start, end]
