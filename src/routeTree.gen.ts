@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedCadastrosRouteImport } from './routes/_authenticated/cadastros'
 import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authenticated/calendario'
 import { Route as AuthenticatedCartoesRouteImport } from './routes/_authenticated/cartoes'
 import { Route as AuthenticatedCasaRouteImport } from './routes/_authenticated/casa'
@@ -27,6 +28,10 @@ import { Route as AuthenticatedMovimentacoesRouteImport } from './routes/_authen
 import { Route as AuthenticatedPlanejamentoRouteImport } from './routes/_authenticated/planejamento'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as AuthenticatedCadastrosCategoriasRouteImport } from './routes/_authenticated/cadastros/categorias'
+import { Route as AuthenticatedCadastrosCentrosDeCustoRouteImport } from './routes/_authenticated/cadastros/centros-de-custo'
+import { Route as AuthenticatedCadastrosContatosRouteImport } from './routes/_authenticated/cadastros/contatos'
+import { Route as AuthenticatedCadastrosTagsRouteImport } from './routes/_authenticated/cadastros/tags'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -50,6 +55,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCadastrosRoute = AuthenticatedCadastrosRouteImport.update({
+  id: '/cadastros',
+  path: '/cadastros',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCalendarioRoute = AuthenticatedCalendarioRouteImport.update({
@@ -120,12 +130,37 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
   path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedCadastrosCategoriasRoute =
+  AuthenticatedCadastrosCategoriasRouteImport.update({
+    id: '/categorias',
+    path: '/categorias',
+    getParentRoute: () => AuthenticatedCadastrosRoute,
+  } as any)
+const AuthenticatedCadastrosCentrosDeCustoRoute =
+  AuthenticatedCadastrosCentrosDeCustoRouteImport.update({
+    id: '/centros-de-custo',
+    path: '/centros-de-custo',
+    getParentRoute: () => AuthenticatedCadastrosRoute,
+  } as any)
+const AuthenticatedCadastrosContatosRoute =
+  AuthenticatedCadastrosContatosRouteImport.update({
+    id: '/contatos',
+    path: '/contatos',
+    getParentRoute: () => AuthenticatedCadastrosRoute,
+  } as any)
+const AuthenticatedCadastrosTagsRoute =
+  AuthenticatedCadastrosTagsRouteImport.update({
+    id: '/tags',
+    path: '/tags',
+    getParentRoute: () => AuthenticatedCadastrosRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/cadastros': typeof AuthenticatedCadastrosRouteWithChildren
   '/calendario': typeof AuthenticatedCalendarioRoute
   '/cartoes': typeof AuthenticatedCartoesRoute
   '/casa': typeof AuthenticatedCasaRoute
@@ -139,12 +174,17 @@ export interface FileRoutesByFullPath {
   '/planejamento': typeof AuthenticatedPlanejamentoRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/cadastros/categorias': typeof AuthenticatedCadastrosCategoriasRoute
+  '/cadastros/centros-de-custo': typeof AuthenticatedCadastrosCentrosDeCustoRoute
+  '/cadastros/contatos': typeof AuthenticatedCadastrosContatosRoute
+  '/cadastros/tags': typeof AuthenticatedCadastrosTagsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/cadastros': typeof AuthenticatedCadastrosRouteWithChildren
   '/calendario': typeof AuthenticatedCalendarioRoute
   '/cartoes': typeof AuthenticatedCartoesRoute
   '/casa': typeof AuthenticatedCasaRoute
@@ -158,6 +198,10 @@ export interface FileRoutesByTo {
   '/planejamento': typeof AuthenticatedPlanejamentoRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/cadastros/categorias': typeof AuthenticatedCadastrosCategoriasRoute
+  '/cadastros/centros-de-custo': typeof AuthenticatedCadastrosCentrosDeCustoRoute
+  '/cadastros/contatos': typeof AuthenticatedCadastrosContatosRoute
+  '/cadastros/tags': typeof AuthenticatedCadastrosTagsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -166,6 +210,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/cadastros': typeof AuthenticatedCadastrosRouteWithChildren
   '/_authenticated/calendario': typeof AuthenticatedCalendarioRoute
   '/_authenticated/cartoes': typeof AuthenticatedCartoesRoute
   '/_authenticated/casa': typeof AuthenticatedCasaRoute
@@ -179,6 +224,10 @@ export interface FileRoutesById {
   '/_authenticated/planejamento': typeof AuthenticatedPlanejamentoRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/_authenticated/cadastros/categorias': typeof AuthenticatedCadastrosCategoriasRoute
+  '/_authenticated/cadastros/centros-de-custo': typeof AuthenticatedCadastrosCentrosDeCustoRoute
+  '/_authenticated/cadastros/contatos': typeof AuthenticatedCadastrosContatosRoute
+  '/_authenticated/cadastros/tags': typeof AuthenticatedCadastrosTagsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -187,6 +236,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/onboarding'
     | '/admin'
+    | '/cadastros'
     | '/calendario'
     | '/cartoes'
     | '/casa'
@@ -200,12 +250,17 @@ export interface FileRouteTypes {
     | '/planejamento'
     | '/relatorios'
     | '/invite/$token'
+    | '/cadastros/categorias'
+    | '/cadastros/centros-de-custo'
+    | '/cadastros/contatos'
+    | '/cadastros/tags'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/onboarding'
     | '/admin'
+    | '/cadastros'
     | '/calendario'
     | '/cartoes'
     | '/casa'
@@ -219,6 +274,10 @@ export interface FileRouteTypes {
     | '/planejamento'
     | '/relatorios'
     | '/invite/$token'
+    | '/cadastros/categorias'
+    | '/cadastros/centros-de-custo'
+    | '/cadastros/contatos'
+    | '/cadastros/tags'
   id:
     | '__root__'
     | '/'
@@ -226,6 +285,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/onboarding'
     | '/_authenticated/admin'
+    | '/_authenticated/cadastros'
     | '/_authenticated/calendario'
     | '/_authenticated/cartoes'
     | '/_authenticated/casa'
@@ -239,6 +299,10 @@ export interface FileRouteTypes {
     | '/_authenticated/planejamento'
     | '/_authenticated/relatorios'
     | '/invite/$token'
+    | '/_authenticated/cadastros/categorias'
+    | '/_authenticated/cadastros/centros-de-custo'
+    | '/_authenticated/cadastros/contatos'
+    | '/_authenticated/cadastros/tags'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -284,6 +348,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cadastros': {
+      id: '/_authenticated/cadastros'
+      path: '/cadastros'
+      fullPath: '/cadastros'
+      preLoaderRoute: typeof AuthenticatedCadastrosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/calendario': {
@@ -377,11 +448,62 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/cadastros/categorias': {
+      id: '/_authenticated/cadastros/categorias'
+      path: '/categorias'
+      fullPath: '/cadastros/categorias'
+      preLoaderRoute: typeof AuthenticatedCadastrosCategoriasRouteImport
+      parentRoute: typeof AuthenticatedCadastrosRoute
+    }
+    '/_authenticated/cadastros/centros-de-custo': {
+      id: '/_authenticated/cadastros/centros-de-custo'
+      path: '/centros-de-custo'
+      fullPath: '/cadastros/centros-de-custo'
+      preLoaderRoute: typeof AuthenticatedCadastrosCentrosDeCustoRouteImport
+      parentRoute: typeof AuthenticatedCadastrosRoute
+    }
+    '/_authenticated/cadastros/contatos': {
+      id: '/_authenticated/cadastros/contatos'
+      path: '/contatos'
+      fullPath: '/cadastros/contatos'
+      preLoaderRoute: typeof AuthenticatedCadastrosContatosRouteImport
+      parentRoute: typeof AuthenticatedCadastrosRoute
+    }
+    '/_authenticated/cadastros/tags': {
+      id: '/_authenticated/cadastros/tags'
+      path: '/tags'
+      fullPath: '/cadastros/tags'
+      preLoaderRoute: typeof AuthenticatedCadastrosTagsRouteImport
+      parentRoute: typeof AuthenticatedCadastrosRoute
+    }
   }
 }
 
+interface AuthenticatedCadastrosRouteChildren {
+  AuthenticatedCadastrosCategoriasRoute: typeof AuthenticatedCadastrosCategoriasRoute
+  AuthenticatedCadastrosCentrosDeCustoRoute: typeof AuthenticatedCadastrosCentrosDeCustoRoute
+  AuthenticatedCadastrosContatosRoute: typeof AuthenticatedCadastrosContatosRoute
+  AuthenticatedCadastrosTagsRoute: typeof AuthenticatedCadastrosTagsRoute
+}
+
+const AuthenticatedCadastrosRouteChildren: AuthenticatedCadastrosRouteChildren =
+  {
+    AuthenticatedCadastrosCategoriasRoute:
+      AuthenticatedCadastrosCategoriasRoute,
+    AuthenticatedCadastrosCentrosDeCustoRoute:
+      AuthenticatedCadastrosCentrosDeCustoRoute,
+    AuthenticatedCadastrosContatosRoute: AuthenticatedCadastrosContatosRoute,
+    AuthenticatedCadastrosTagsRoute: AuthenticatedCadastrosTagsRoute,
+  }
+
+const AuthenticatedCadastrosRouteWithChildren =
+  AuthenticatedCadastrosRoute._addFileChildren(
+    AuthenticatedCadastrosRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedCadastrosRoute: typeof AuthenticatedCadastrosRouteWithChildren
   AuthenticatedCalendarioRoute: typeof AuthenticatedCalendarioRoute
   AuthenticatedCartoesRoute: typeof AuthenticatedCartoesRoute
   AuthenticatedCasaRoute: typeof AuthenticatedCasaRoute
@@ -398,6 +520,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedCadastrosRoute: AuthenticatedCadastrosRouteWithChildren,
   AuthenticatedCalendarioRoute: AuthenticatedCalendarioRoute,
   AuthenticatedCartoesRoute: AuthenticatedCartoesRoute,
   AuthenticatedCasaRoute: AuthenticatedCasaRoute,
