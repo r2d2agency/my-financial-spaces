@@ -649,6 +649,52 @@ export const dbQuery = createServerFn({ method: "POST" })
           }
           return results;
         }
+        if (data.rpcName === "list_contacts") {
+          const { workspace_id } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+          const res = await query("SELECT * FROM public.contacts WHERE workspace_id = $1 ORDER BY name ASC", [workspace_id]);
+          return res.rows;
+        }
+        if (data.rpcName === "save_contact") {
+          const { id, workspace_id, name, document, phone, email, type } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+          if (id) {
+             const res = await query(
+               "UPDATE public.contacts SET name=$1, document=$2, phone=$3, email=$4, type=$5 WHERE id=$6 AND workspace_id=$7 RETURNING *",
+               [name, document, phone, email, type, id, workspace_id]
+             );
+             return res.rows[0];
+          } else {
+             const res = await query(
+               "INSERT INTO public.contacts (workspace_id, name, document, phone, email, type) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+               [workspace_id, name, document, phone, email, type]
+             );
+             return res.rows[0];
+          }
+        }
+        if (data.rpcName === "list_categories") {
+          const { workspace_id } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+          const res = await query("SELECT * FROM public.categories WHERE workspace_id = $1 ORDER BY name ASC", [workspace_id]);
+          return res.rows;
+        }
+        if (data.rpcName === "save_category") {
+          const { id, workspace_id, name, type } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+          if (id) {
+             const res = await query(
+               "UPDATE public.categories SET name=$1, type=$2 WHERE id=$3 AND workspace_id=$4 RETURNING *",
+               [name, type, id, workspace_id]
+             );
+             return res.rows[0];
+          } else {
+             const res = await query(
+               "INSERT INTO public.categories (workspace_id, name, type) VALUES ($1, $2, $3) RETURNING *",
+               [workspace_id, name, type]
+             );
+             return res.rows[0];
+          }
+        }
       } catch (rpcErr) {
         console.error(`RPC Error (${data.rpcName}):`, rpcErr);
         if (rpcErr instanceof Error) {
@@ -659,4 +705,7 @@ export const dbQuery = createServerFn({ method: "POST" })
     }
 
     throw new Error("Ação não suportada");
+
+
   });
+
