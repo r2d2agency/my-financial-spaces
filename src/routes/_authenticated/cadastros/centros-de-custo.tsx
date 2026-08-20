@@ -166,13 +166,12 @@ function CostCenters() {
           <form onSubmit={e => {
             e.preventDefault();
             const formData = new FormData(e.currentTarget);
-            console.log("Saving CC:", {
+            saveCC.mutate({
               id: editingCC?.id,
               name: formData.get("name"),
               code: formData.get("code"),
               description: formData.get("description"),
             });
-            saveCC.mutate({
               id: editingCC?.id,
               name: formData.get("name"),
               code: formData.get("code"),
