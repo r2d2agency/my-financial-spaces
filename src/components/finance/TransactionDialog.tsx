@@ -68,6 +68,8 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
         account_id: tx.account_id || "",
         card_id: tx.card_id || "",
         category_id: tx.category_id || "",
+        cost_center_id: tx.cost_center_id || "",
+        tag_ids: tx.tag_ids || [],
         person_name: tx.person_name || "",
         notes: tx.notes || "",
         account_dest_id: "",
