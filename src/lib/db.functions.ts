@@ -683,13 +683,13 @@ export const dbQuery = createServerFn({ method: "POST" })
           await verifyAuth(workspace_id);
           if (id) {
              const res = await query(
-               "UPDATE public.categories SET name=$1, type=$2 WHERE id=$3 AND workspace_id=$4 RETURNING *",
+               "UPDATE public.categories SET name=$1, kind=CAST($2 AS public.tx_type) WHERE id=$3 AND workspace_id=$4 RETURNING *",
                [name, type, id, workspace_id]
              );
              return res.rows[0];
           } else {
              const res = await query(
-               "INSERT INTO public.categories (workspace_id, name, type) VALUES ($1, $2, $3) RETURNING *",
+               "INSERT INTO public.categories (workspace_id, name, kind) VALUES ($1, $2, CAST($3 AS public.tx_type)) RETURNING *",
                [workspace_id, name, type]
              );
              return res.rows[0];
