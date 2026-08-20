@@ -695,6 +695,108 @@ export const dbQuery = createServerFn({ method: "POST" })
              return res.rows[0];
           }
         }
+        if (data.rpcName === "get_financial_planning") {
+          const { workspace_id, month, year } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+
+          const startDate = new Date(year, month - 1, 1);
+          const endDate = new Date(year, month, 0);
+          const isoStart = startDate.toISOString().split('T')[0];
+          const isoEnd = endDate.toISOString().split('T')[0];
+
+          // 1. Buscar Categorias
+          const cats = await query(
+            "SELECT id, name, kind::text as type FROM public.categories WHERE workspace_id = $1 ORDER BY name ASC",
+            [workspace_id]
+          );
+
+          // 2. Buscar Planejado (Budgets)
+          const budgets = await query(
+            "SELECT id, category_id, amount FROM public.budgets WHERE workspace_id = $1 AND period_month = $2 AND period_year = $3",
+            [workspace_id, month, year]
+          );
+
+          // 3. Buscar Realizado e Previsto por Categoria
+          // Excluímos transferências e pagamentos de fatura para não duplicar orçamento
+          const txStats = await query(
+            `SELECT 
+              category_id,
+              kind::text as category_type,
+              SUM(CASE WHEN status::text = 'paid' THEN amount ELSE 0 END) as realized,
+              SUM(CASE WHEN status::text = 'pending' THEN amount ELSE 0 END) as predicted
+             FROM public.transactions
+             WHERE workspace_id = $1 
+               AND type::text NOT IN ('transfer', 'card_payment')
+               AND competence_date BETWEEN $2 AND $3
+             GROUP BY category_id, kind::text`,
+            [workspace_id, isoStart, isoEnd]
+          );
+
+          return {
+            categories: cats.rows,
+            budgets: budgets.rows,
+            stats: txStats.rows,
+            month,
+            year
+          };
+        }
+
+        if (data.rpcName === "save_budget_item") {
+          const { workspace_id, category_id, amount, month, year } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+
+          const existing = await query(
+            "SELECT id FROM public.budgets WHERE workspace_id = $1 AND category_id = $2 AND period_month = $3 AND period_year = $4",
+            [workspace_id, category_id, month, year]
+          );
+
+          if (existing.rows.length > 0) {
+            await query(
+              "UPDATE public.budgets SET amount = $1, updated_at = NOW() WHERE id = $2",
+              [amount, existing.rows[0].id]
+            );
+            return { success: true, id: existing.rows[0].id };
+          } else {
+            const res = await query(
+              "INSERT INTO public.budgets (workspace_id, category_id, amount, period_month, period_year) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+              [workspace_id, category_id, amount, month, year]
+            );
+            return { success: true, id: res.rows[0].id };
+          }
+        }
+
+        if (data.rpcName === "copy_previous_budget") {
+          const { workspace_id, current_month, current_year } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+
+          let prevMonth = current_month - 1;
+          let prevYear = current_year;
+          if (prevMonth === 0) {
+            prevMonth = 12;
+            prevYear--;
+          }
+
+          const prevBudgets = await query(
+            "SELECT category_id, amount FROM public.budgets WHERE workspace_id = $1 AND period_month = $2 AND period_year = $3",
+            [workspace_id, prevMonth, prevYear]
+          );
+
+          if (prevBudgets.rows.length === 0) {
+            throw new Error("Nenhum planejamento encontrado no mês anterior.");
+          }
+
+          for (const b of prevBudgets.rows) {
+            await query(
+              `INSERT INTO public.budgets (workspace_id, category_id, amount, period_month, period_year) 
+               VALUES ($1, $2, $3, $4, $5)
+               ON CONFLICT (workspace_id, category_id, period_month, period_year) 
+               DO UPDATE SET amount = EXCLUDED.amount, updated_at = NOW()`,
+              [workspace_id, b.category_id, b.amount, current_month, current_year]
+            );
+          }
+
+          return { success: true, count: prevBudgets.rows.length };
+        }
       } catch (rpcErr) {
         console.error(`RPC Error (${data.rpcName}):`, rpcErr);
         if (rpcErr instanceof Error) {
