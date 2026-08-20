@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, Loader2, ChevronDown, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface TransactionDialogProps {
   open: boolean;
@@ -39,6 +40,8 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
     account_id: "",
     card_id: "",
     category_id: "",
+    cost_center_id: "",
+    tag_ids: [] as string[],
     person_name: "",
     notes: "",
     account_dest_id: "",
@@ -65,6 +68,8 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
         account_id: tx.account_id || "",
         card_id: tx.card_id || "",
         category_id: tx.category_id || "",
+        cost_center_id: tx.cost_center_id || "",
+        tag_ids: tx.tag_ids || [],
         person_name: tx.person_name || "",
         notes: tx.notes || "",
         account_dest_id: "",
@@ -87,6 +92,8 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
         account_id: "",
         card_id: "",
         category_id: "",
+        cost_center_id: "",
+        tag_ids: [] as string[],
         person_name: "",
         notes: "",
         account_dest_id: "",
@@ -106,15 +113,19 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
     queryKey: ["meta", wsId],
     enabled: !!wsId && open,
     queryFn: async () => {
-      const [accs, cats, cards] = await Promise.all([
+      const [accs, cats, cards, ccs, tags] = await Promise.all([
         db.from("financial_accounts").select("id, name").eq("workspace_id", wsId!).execute(),
         db.from("categories").select("id, name").eq("workspace_id", wsId!).execute(),
         db.from("credit_cards").select("id, name").eq("workspace_id", wsId!).execute(),
+        db.from("cost_centers").select("id, name").eq("workspace_id", wsId!).execute(),
+        db.from("tags").select("id, name").eq("workspace_id", wsId!).execute(),
       ]);
       return {
         accounts: (accs.data as any[]) || [],
         categories: (cats.data as any[]) || [],
         cards: (cards.data as any[]) || [],
+        costCenters: (ccs.data as any[]) || [],
+        tags: (tags.data as any[]) || [],
       };
     },
   });
@@ -190,17 +201,34 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
         account_id: isCard ? null : (form.account_id || null),
         card_id: isCard ? (form.card_id || null) : null,
         category_id: form.category_id || null,
+        cost_center_id: form.cost_center_id || null,
         person_name: form.person_name.trim() || null,
         notes: form.notes.trim() || null,
         updated_by: me?.id,
       };
 
+      let transactionId: string;
       if (isEdit) {
         const { error } = await db.from("transactions").update(data).eq("id", tx.id).eq("workspace_id", wsId!).execute();
         if (error) throw error;
+        transactionId = tx.id;
       } else {
-        const { error } = await db.from("transactions").insert({ ...data, created_by: me?.id }).execute();
+        const { data: newTx, error } = await db.from("transactions").insert({ ...data, created_by: me?.id }).execute();
         if (error) throw error;
+        transactionId = newTx.id;
+      }
+
+      // Sincronizar Tags (Many-to-Many)
+      // Remove existing
+      await db.from("transaction_tags").delete().eq("transaction_id", transactionId).execute();
+      
+      // Add new
+      if (form.tag_ids.length > 0) {
+        const tagLinks = form.tag_ids.map(tagId => ({
+          transaction_id: transactionId,
+          tag_id: tagId
+        }));
+        await db.from("transaction_tags").insert(tagLinks).execute();
       }
     },
     onSuccess: () => {
@@ -410,6 +438,48 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
             
             {showAdvanced && (
               <div className="p-4 border rounded-lg bg-slate-50 space-y-4 animate-in fade-in slide-in-from-top-2">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs">Centro de Custo</Label>
+                    <div className="flex gap-1">
+                      <select 
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs ring-offset-background"
+                        value={form.cost_center_id}
+                        onChange={e => setForm(f => ({ ...f, cost_center_id: e.target.value }))}
+                      >
+                        <option value="">Nenhum</option>
+                        {meta?.costCenters?.map((cc: any) => (
+                          <option key={cc.id} value={cc.id}>{cc.name}</option>
+                        ))}
+                      </select>
+                      <Button size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={() => window.open('/cadastros/centros-de-custo', '_blank')}><Plus className="size-3"/></Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Tags</Label>
+                    <div className="flex gap-1">
+                      <div className="flex-1 flex flex-wrap gap-1 p-1 border rounded bg-white min-h-[36px]">
+                         {meta?.tags?.map((t: any) => (
+                           <Badge 
+                             key={t.id} 
+                             variant={form.tag_ids.includes(t.id) ? "default" : "outline"}
+                             className="text-[10px] cursor-pointer h-5"
+                             onClick={() => {
+                               const newTags = form.tag_ids.includes(t.id) 
+                                 ? form.tag_ids.filter(id => id !== t.id)
+                                 : [...form.tag_ids, t.id];
+                               setForm(f => ({ ...f, tag_ids: newTags }));
+                             }}
+                           >
+                             {t.name}
+                           </Badge>
+                         ))}
+                      </div>
+                      <Button size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={() => window.open('/cadastros/tags', '_blank')}><Plus className="size-3"/></Button>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground italic">Observações / Notas</Label>
                   <Input 
