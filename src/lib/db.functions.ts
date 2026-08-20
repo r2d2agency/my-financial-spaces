@@ -32,15 +32,10 @@ const verifyAuth = async (workspaceId?: string) => {
 export const dbQuery = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
     z.object({
-      table: z.string(),
+      table: z.string().optional(),
       action: z.enum(["select", "insert", "update", "delete", "rpc"]),
       columns: z.string().optional(),
-      filters: z.record(z.any()).optional(),
-      data: z.any().optional(),
-      rpcName: z.string().optional(),
-      rpcArgs: z.any().optional(),
-      orderBy: z.string().optional(),
-      orderAsc: z.boolean().optional(),
+...
       limit: z.number().optional(),
     }).parse(data)
   )
