@@ -91,7 +91,7 @@ export type Role = (typeof ROLES)[number]["value"];
 
 export const isIncomeType = (t: string) => t === "income" || t === "refund" || t === "extra_income";
 export const isExpenseType = (t: string) =>
-  t === "expense" || t === "debt_payment" || t === "card_payment";
+  t === "expense" || t === "debt_payment" || t === "card_payment" || t === "fixed_expense";
 
 /** Extra-payment payoff simulation for a debt. */
 export function simulatePayoff(
