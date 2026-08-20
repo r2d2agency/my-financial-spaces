@@ -410,6 +410,48 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
             
             {showAdvanced && (
               <div className="p-4 border rounded-lg bg-slate-50 space-y-4 animate-in fade-in slide-in-from-top-2">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs">Centro de Custo</Label>
+                    <div className="flex gap-1">
+                      <select 
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs ring-offset-background"
+                        value={form.cost_center_id}
+                        onChange={e => setForm(f => ({ ...f, cost_center_id: e.target.value }))}
+                      >
+                        <option value="">Nenhum</option>
+                        {meta?.costCenters?.map((cc: any) => (
+                          <option key={cc.id} value={cc.id}>{cc.name}</option>
+                        ))}
+                      </select>
+                      <Button size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={() => window.open('/cadastros/centros-de-custo', '_blank')}><Plus className="size-3"/></Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Tags</Label>
+                    <div className="flex gap-1">
+                      <div className="flex-1 flex flex-wrap gap-1 p-1 border rounded bg-white min-h-[36px]">
+                         {meta?.tags?.map((t: any) => (
+                           <Badge 
+                             key={t.id} 
+                             variant={form.tag_ids.includes(t.id) ? "default" : "outline"}
+                             className="text-[10px] cursor-pointer h-5"
+                             onClick={() => {
+                               const newTags = form.tag_ids.includes(t.id) 
+                                 ? form.tag_ids.filter(id => id !== t.id)
+                                 : [...form.tag_ids, t.id];
+                               setForm(f => ({ ...f, tag_ids: newTags }));
+                             }}
+                           >
+                             {t.name}
+                           </Badge>
+                         ))}
+                      </div>
+                      <Button size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={() => window.open('/cadastros/tags', '_blank')}><Plus className="size-3"/></Button>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground italic">Observações / Notas</Label>
                   <Input 
