@@ -201,17 +201,34 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
         account_id: isCard ? null : (form.account_id || null),
         card_id: isCard ? (form.card_id || null) : null,
         category_id: form.category_id || null,
+        cost_center_id: form.cost_center_id || null,
         person_name: form.person_name.trim() || null,
         notes: form.notes.trim() || null,
         updated_by: me?.id,
       };
 
+      let transactionId: string;
       if (isEdit) {
         const { error } = await db.from("transactions").update(data).eq("id", tx.id).eq("workspace_id", wsId!).execute();
         if (error) throw error;
+        transactionId = tx.id;
       } else {
-        const { error } = await db.from("transactions").insert({ ...data, created_by: me?.id }).execute();
+        const { data: newTx, error } = await db.from("transactions").insert({ ...data, created_by: me?.id }).execute();
         if (error) throw error;
+        transactionId = newTx.id;
+      }
+
+      // Sincronizar Tags (Many-to-Many)
+      // Remove existing
+      await db.from("transaction_tags").delete().eq("transaction_id", transactionId).execute();
+      
+      // Add new
+      if (form.tag_ids.length > 0) {
+        const tagLinks = form.tag_ids.map(tagId => ({
+          transaction_id: transactionId,
+          tag_id: tagId
+        }));
+        await db.from("transaction_tags").insert(tagLinks).execute();
       }
     },
     onSuccess: () => {

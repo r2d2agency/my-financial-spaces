@@ -106,7 +106,10 @@ function Movimentacoes() {
     retry: false,
     queryFn: async () => {
       let query = db.from("transactions")
-        .select("*")
+        .select(`
+          *,
+          tags:transaction_tags(tag_id)
+        `)
         .eq("workspace_id", wsId!)
         .gte("competence_date", startIso)
         .lte("competence_date", endIso)
@@ -118,10 +121,25 @@ function Movimentacoes() {
       
       if (searchParams.account_id && searchParams.account_id !== 'undefined') query = query.eq("account_id", searchParams.account_id);
       if (searchParams.card_id && searchParams.card_id !== 'undefined') query = query.eq("card_id", searchParams.card_id);
+      if (searchParams.cost_center_id && searchParams.cost_center_id !== 'undefined') query = query.eq("cost_center_id", searchParams.cost_center_id);
+      
+      // Filtro de Tag via subquery ou filtragem manual no post-process se necessário, 
+      // mas como o driver db-browser simula o Supabase, tentaremos filtro direto:
+      // Nota: o driver customizado pode não suportar filtros em relacionamentos complexos, 
+      // então aplicaremos filtro no cliente se houver tag_id.
       
       const { data, error: qErr } = await query.execute();
       if (qErr) throw qErr;
-      return Array.isArray(data) ? data : [];
+      
+      let results = Array.isArray(data) ? data : [];
+      
+      if (searchParams.tag_id && searchParams.tag_id !== 'undefined') {
+        results = results.filter(r => 
+          r.tags && Array.isArray(r.tags) && r.tags.some((t: any) => t.tag_id === searchParams.tag_id)
+        );
+      }
+      
+      return results;
     },
   });
 
@@ -157,6 +175,52 @@ function Movimentacoes() {
           Novo lançamento
         </Button>
       </header>
+
+      <div className="bg-white border-b px-6 py-2 flex flex-wrap gap-2 items-center">
+        <div className="relative w-full md:w-64">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input 
+            placeholder="Buscar..." 
+            className="pl-9 h-9" 
+            value={search} 
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+        
+        <select 
+          className="h-9 rounded-md border border-input bg-background px-3 py-1 text-xs"
+          value={searchParams.cost_center_id || ""}
+          onChange={e => Route.navigate({ search: { ...searchParams, cost_center_id: e.target.value || undefined } })}
+        >
+          <option value="">Todos Centros</option>
+          {meta?.costCenters?.map((cc: any) => (
+            <option key={cc.id} value={cc.id}>{cc.name}</option>
+          ))}
+        </select>
+
+        <select 
+          className="h-9 rounded-md border border-input bg-background px-3 py-1 text-xs"
+          value={searchParams.tag_id || ""}
+          onChange={e => Route.navigate({ search: { ...searchParams, tag_id: e.target.value || undefined } })}
+        >
+          <option value="">Todas Tags</option>
+          {meta?.tags?.map((t: any) => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
+        
+        <div className="flex-1" />
+        
+        <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setRef(addMonths(ref, -1))}>
+            <ChevronLeft className="size-4" />
+          </Button>
+          <span className="text-xs font-bold px-2 w-32 text-center capitalize">{monthLabel(ref)}</span>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setRef(addMonths(ref, 1))}>
+            <ChevronRight className="size-4" />
+          </Button>
+        </div>
+      </div>
 
       <TransactionSummary {...stats} hideBalances={hideBalances} />
 
