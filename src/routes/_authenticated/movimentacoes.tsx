@@ -196,7 +196,7 @@ function Movimentacoes() {
         <select 
           className="h-9 rounded-md border border-input bg-background px-3 py-1 text-xs"
           value={searchParams.cost_center_id || ""}
-          onChange={e => navigate({ search: { ...searchParams, cost_center_id: e.target.value || undefined } })}
+          onChange={e => navigate({ search: { ...searchParams, cost_center_id: e.target.value || undefined } as any })}
         >
           <option value="">Todos Centros</option>
           {meta?.costCenters?.map((cc: any) => (
@@ -207,7 +207,7 @@ function Movimentacoes() {
         <select 
           className="h-9 rounded-md border border-input bg-background px-3 py-1 text-xs"
           value={searchParams.tag_id || ""}
-          onChange={e => navigate({ search: { ...searchParams, tag_id: e.target.value || undefined } })}
+          onChange={e => navigate({ search: { ...searchParams, tag_id: e.target.value || undefined } as any })}
         >
           <option value="">Todas Tags</option>
           {meta?.tags?.map((t: any) => (

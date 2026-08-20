@@ -102,7 +102,7 @@ function Dashboard() {
                   {alerts.overdue_count} lançamentos estão vencidos, totalizando {brl(alerts.overdue_amount)}.
                 </p>
               </div>
-              <Link to="/movimentacoes" search={{ account_id: undefined, card_id: undefined, cost_center_id: undefined, tag_id: undefined }} className="absolute inset-0 z-10" />
+              <Link to="/movimentacoes" search={{ account_id: undefined, card_id: undefined, cost_center_id: undefined, tag_id: undefined } as any} className="absolute inset-0 z-10" />
             </div>
           )}
           {alerts.soon_count > 0 && (
@@ -190,7 +190,7 @@ function Dashboard() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">A Receber</CardTitle>
               <Button variant="ghost" size="sm" asChild className="h-7 text-xs">
-                <Link to="/movimentacoes" search={{ account_id: undefined, card_id: undefined, cost_center_id: undefined, tag_id: undefined }}>Ver todas</Link>
+                <Link to="/movimentacoes" search={{ account_id: undefined, card_id: undefined, cost_center_id: undefined, tag_id: undefined } as any}>Ver todas</Link>
               </Button>
             </CardHeader>
               <CardContent className="pt-0 space-y-3">
@@ -214,7 +214,7 @@ function Dashboard() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">A Pagar</CardTitle>
               <Button variant="ghost" size="sm" asChild className="h-7 text-xs">
-                <Link to="/movimentacoes" search={{ account_id: undefined, card_id: undefined, cost_center_id: undefined, tag_id: undefined }}>Ver todas</Link>
+                <Link to="/movimentacoes" search={{ account_id: undefined, card_id: undefined, cost_center_id: undefined, tag_id: undefined } as any}>Ver todas</Link>
               </Button>
             </CardHeader>
               <CardContent className="pt-0 space-y-3">
