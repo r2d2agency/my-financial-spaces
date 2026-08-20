@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -70,6 +70,7 @@ import { ArrowUpRight, ArrowDownLeft, ArrowRightLeft } from "lucide-react";
 
 function Movimentacoes() {
   const { wsId, hideBalances } = useWorkspace();
+  const navigate = useNavigate();
   const searchParams = Route.useSearch();
   const [ref, setRef] = useState(() => new Date());
   const [tab, setTab] = useState<"all" | "income" | "expense" | "transfer">("all");
@@ -190,7 +191,7 @@ function Movimentacoes() {
         <select 
           className="h-9 rounded-md border border-input bg-background px-3 py-1 text-xs"
           value={searchParams.cost_center_id || ""}
-          onChange={e => Route.navigate({ search: { ...searchParams, cost_center_id: e.target.value || undefined } })}
+          onChange={e => navigate({ search: { ...searchParams, cost_center_id: e.target.value || undefined } })}
         >
           <option value="">Todos Centros</option>
           {meta?.costCenters?.map((cc: any) => (
@@ -201,7 +202,7 @@ function Movimentacoes() {
         <select 
           className="h-9 rounded-md border border-input bg-background px-3 py-1 text-xs"
           value={searchParams.tag_id || ""}
-          onChange={e => Route.navigate({ search: { ...searchParams, tag_id: e.target.value || undefined } })}
+          onChange={e => navigate({ search: { ...searchParams, tag_id: e.target.value || undefined } })}
         >
           <option value="">Todas Tags</option>
           {meta?.tags?.map((t: any) => (
