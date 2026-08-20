@@ -16,9 +16,6 @@ import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/_authenticated/cadastros/centros-de-custo")({
   component: CostCenters,
-  head: () => ({
-    title: "Centros de Custo · Espaço Financeiro",
-  }),
 });
 
 function CostCenters() {
