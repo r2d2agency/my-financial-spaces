@@ -85,13 +85,17 @@ function Movimentacoes() {
     queryKey: ["meta", wsId],
     enabled: !!wsId,
     queryFn: async () => {
-      const [accs, cats] = await Promise.all([
+      const [accs, cats, ccs, tags] = await Promise.all([
         db.from("financial_accounts").select("id, name").eq("workspace_id", wsId!).execute(),
         db.from("categories").select("id, name").eq("workspace_id", wsId!).execute(),
+        db.from("cost_centers").select("id, name").eq("workspace_id", wsId!).execute(),
+        db.from("tags").select("id, name").eq("workspace_id", wsId!).execute(),
       ]);
       return {
         accounts: (accs.data as any[]) || [],
         categories: (cats.data as any[]) || [],
+        costCenters: (ccs.data as any[]) || [],
+        tags: (tags.data as any[]) || [],
       };
     },
   });
