@@ -695,7 +695,76 @@ export const dbQuery = createServerFn({ method: "POST" })
              return res.rows[0];
           }
         }
-        if (data.rpcName === "get_financial_planning") {
+        if (data.rpcName === "list_cost_centers") {
+          const { workspace_id } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+          const res = await query(`
+            SELECT cc.*, 
+                   (SELECT COUNT(*) FROM public.transactions t WHERE t.cost_center_id = cc.id) as transaction_count
+            FROM public.cost_centers cc 
+            WHERE cc.workspace_id = $1 
+            ORDER BY cc.archived ASC, cc.name ASC
+          `, [workspace_id]);
+          return res.rows;
+        }
+        if (data.rpcName === "save_cost_center") {
+          const { id, workspace_id, name, code, description, archived } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+          if (id) {
+            const res = await query(
+              "UPDATE public.cost_centers SET name=COALESCE($1, name), code=COALESCE($2, code), description=COALESCE($3, description), archived=COALESCE($4, archived) WHERE id=$5 AND workspace_id=$6 RETURNING *",
+              [name, code, description, archived, id, workspace_id]
+            );
+            return res.rows[0];
+          } else {
+            const res = await query(
+              "INSERT INTO public.cost_centers (workspace_id, name, code, description) VALUES ($1, $2, $3, $4) RETURNING *",
+              [workspace_id, name, code, description]
+            );
+            return res.rows[0];
+          }
+        }
+        if (data.rpcName === "list_tags") {
+          const { workspace_id } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+          const res = await query(`
+            SELECT t.*, 
+                   (SELECT COUNT(*) FROM public.transaction_tags tt WHERE tt.tag_id = t.id) as usage_count
+            FROM public.tags t
+            WHERE t.workspace_id = $1 
+            ORDER BY t.archived ASC, t.name ASC
+          `, [workspace_id]);
+          return res.rows;
+        }
+        if (data.rpcName === "save_tag") {
+          const { id, workspace_id, name, color, archived } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+          if (id) {
+            const res = await query(
+              "UPDATE public.tags SET name=COALESCE($1, name), color=COALESCE($2, color), archived=COALESCE($3, archived) WHERE id=$4 AND workspace_id=$5 RETURNING *",
+              [name, color, archived, id, workspace_id]
+            );
+            return res.rows[0];
+          } else {
+            const res = await query(
+              "INSERT INTO public.tags (workspace_id, name, color) VALUES ($1, $2, $3) RETURNING *",
+              [workspace_id, name, color]
+            );
+            return res.rows[0];
+          }
+        }
+        if (data.rpcName === "delete_tag") {
+          const { id, workspace_id } = data.rpcArgs;
+          await verifyAuth(workspace_id);
+          // Check if used
+          const check = await query("SELECT COUNT(*) FROM public.transaction_tags WHERE tag_id = $1", [id]);
+          if (parseInt(check.rows[0].count) > 0) {
+            throw new Error("Não é possível excluir uma tag que possui movimentações vinculadas. Arquive-a em vez disso.");
+          }
+          await query("DELETE FROM public.tags WHERE id = $1 AND workspace_id = $2", [id, workspace_id]);
+          return { success: true };
+        }
+
           const { workspace_id, month, year } = data.rpcArgs;
           await verifyAuth(workspace_id);
 
