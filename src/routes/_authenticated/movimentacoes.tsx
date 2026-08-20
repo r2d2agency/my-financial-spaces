@@ -34,6 +34,8 @@ export const Route = createFileRoute("/_authenticated/movimentacoes")({
   validateSearch: (search: Record<string, unknown>) => ({
     account_id: (search['account_id'] as string) || undefined,
     card_id: (search['card_id'] as string) || undefined,
+    cost_center_id: (search['cost_center_id'] as string) || undefined,
+    tag_id: (search['tag_id'] as string) || undefined,
   }),
   component: Movimentacoes,
 });
