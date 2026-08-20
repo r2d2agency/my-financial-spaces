@@ -126,6 +126,7 @@ export const dbQuery = createServerFn({ method: "POST" })
       const vals = Object.values(data.data);
       const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
       const sql = `INSERT INTO ${data.table} (${keys.join(", ")}) VALUES (${placeholders}) RETURNING *`;
+      console.log('SQL:', sql, vals);
       const res = await query(sql, vals);
       return res.rows[0];
     }
