@@ -32,7 +32,7 @@ const verifyAuth = async (workspaceId?: string) => {
 export const dbQuery = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
     z.object({
-      table: z.string(),
+      table: z.string().optional(),
       action: z.enum(["select", "insert", "update", "delete", "rpc"]),
       columns: z.string().optional(),
       filters: z.record(z.any()).optional(),
@@ -713,7 +713,7 @@ export const dbQuery = createServerFn({ method: "POST" })
           if (id) {
             const res = await query(
               "UPDATE public.cost_centers SET name=COALESCE($1, name), code=COALESCE($2, code), description=COALESCE($3, description), archived=COALESCE($4, archived) WHERE id=$5 AND workspace_id=$6 RETURNING *",
-              [name, code, description, archived, id, workspace_id]
+              [name || null, code || null, description || null, archived !== undefined ? archived : null, id, workspace_id]
             );
             return res.rows[0];
           } else {
@@ -742,7 +742,7 @@ export const dbQuery = createServerFn({ method: "POST" })
           if (id) {
             const res = await query(
               "UPDATE public.tags SET name=COALESCE($1, name), color=COALESCE($2, color), archived=COALESCE($3, archived) WHERE id=$4 AND workspace_id=$5 RETURNING *",
-              [name, color, archived, id, workspace_id]
+              [name || null, color || null, archived !== undefined ? archived : null, id, workspace_id]
             );
             return res.rows[0];
           } else {

@@ -716,6 +716,12 @@ export async function initializeDatabase() {
         );
 
         DROP TABLE IF EXISTS public.credit_card_bills;
+
+        -- Sprint G: Ajustes em Contatos, Centros de Custo e Tags
+        ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS archived BOOLEAN DEFAULT false;
+        ALTER TABLE public.cost_centers ADD COLUMN IF NOT EXISTS archived BOOLEAN DEFAULT false;
+        ALTER TABLE public.tags ADD COLUMN IF NOT EXISTS archived BOOLEAN DEFAULT false;
+        ALTER TABLE public.tags ADD COLUMN IF NOT EXISTS color TEXT;
       `;
 
       await query(sql);
