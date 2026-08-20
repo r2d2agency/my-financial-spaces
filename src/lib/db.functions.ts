@@ -764,7 +764,7 @@ export const dbQuery = createServerFn({ method: "POST" })
           await query("DELETE FROM public.tags WHERE id = $1 AND workspace_id = $2", [id, workspace_id]);
           return { success: true };
         }
-
+        if (data.rpcName === "get_financial_planning") {
           const { workspace_id, month, year } = data.rpcArgs;
           await verifyAuth(workspace_id);
 
