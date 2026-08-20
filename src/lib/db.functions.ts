@@ -675,7 +675,7 @@ export const dbQuery = createServerFn({ method: "POST" })
         if (data.rpcName === "list_categories") {
           const { workspace_id } = data.rpcArgs;
           await verifyAuth(workspace_id);
-          const res = await query("SELECT * FROM public.categories WHERE workspace_id = $1 ORDER BY name ASC", [workspace_id]);
+          const res = await query("SELECT id, workspace_id, name, kind as type, parent_id, is_house_cost, color, created_at FROM public.categories WHERE workspace_id = $1 ORDER BY name ASC", [workspace_id]);
           return res.rows;
         }
         if (data.rpcName === "save_category") {
