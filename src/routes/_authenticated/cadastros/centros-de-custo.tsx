@@ -172,11 +172,6 @@ function CostCenters() {
               code: formData.get("code"),
               description: formData.get("description"),
             });
-              id: editingCC?.id,
-              name: formData.get("name"),
-              code: formData.get("code"),
-              description: formData.get("description"),
-            });
           }} className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nome do Centro de Custo *</Label>
