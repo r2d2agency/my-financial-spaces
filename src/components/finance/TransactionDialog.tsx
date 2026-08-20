@@ -109,15 +109,19 @@ export function TransactionDialog({ open, onOpenChange, tx }: TransactionDialogP
     queryKey: ["meta", wsId],
     enabled: !!wsId && open,
     queryFn: async () => {
-      const [accs, cats, cards] = await Promise.all([
+      const [accs, cats, cards, ccs, tags] = await Promise.all([
         db.from("financial_accounts").select("id, name").eq("workspace_id", wsId!).execute(),
         db.from("categories").select("id, name").eq("workspace_id", wsId!).execute(),
         db.from("credit_cards").select("id, name").eq("workspace_id", wsId!).execute(),
+        db.from("cost_centers").select("id, name").eq("workspace_id", wsId!).execute(),
+        db.from("tags").select("id, name").eq("workspace_id", wsId!).execute(),
       ]);
       return {
         accounts: (accs.data as any[]) || [],
         categories: (cats.data as any[]) || [],
         cards: (cards.data as any[]) || [],
+        costCenters: (ccs.data as any[]) || [],
+        tags: (tags.data as any[]) || [],
       };
     },
   });
