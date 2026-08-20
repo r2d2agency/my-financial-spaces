@@ -40,7 +40,7 @@ const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/movimentacoes", label: "Movimentações", icon: ArrowLeftRight },
   { to: "/contas", label: "Contas", icon: Wallet },
-  { to: "/_authenticated/cadastros/contatos", label: "Cadastros", icon: Layers },
+  { to: "/cadastros/contatos", label: "Cadastros", icon: Layers },
   { to: "/casa", label: "Casa e Família", icon: Home },
   { to: "/cartoes", label: "Cartões", icon: CreditCard },
   { to: "/dividas", label: "Dívidas", icon: TrendingDown },
