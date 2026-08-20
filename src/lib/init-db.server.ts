@@ -577,10 +577,11 @@ export async function initializeDatabase() {
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
           category_id UUID NOT NULL REFERENCES public.categories(id) ON DELETE CASCADE,
-          amount NUMERIC(14,2) NOT NULL,
+          amount NUMERIC(14,2) NOT NULL DEFAULT 0,
           period_month INTEGER NOT NULL, -- 1-12
           period_year INTEGER NOT NULL,
           created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
           UNIQUE (workspace_id, category_id, period_month, period_year)
         );
 
