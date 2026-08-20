@@ -15,10 +15,10 @@ export const Route = createFileRoute("/_authenticated/cadastros")({
 
 function CadastrosLayout() {
   const menuItems = [
-    { label: "Contatos", icon: Users, to: "/_authenticated/cadastros/contatos" },
-    { label: "Categorias", icon: Layers, to: "/_authenticated/cadastros/categorias" },
-    { label: "Centros de Custo", icon: Target, to: "/_authenticated/cadastros/centros-de-custo" },
-    { label: "Tags", icon: Tag, to: "/_authenticated/cadastros/tags" },
+    { label: "Contatos", icon: Users, to: "/cadastros/contatos" },
+    { label: "Categorias", icon: Layers, to: "/cadastros/categorias" },
+    { label: "Centros de Custo", icon: Target, to: "/cadastros/centros-de-custo" },
+    { label: "Tags", icon: Tag, to: "/cadastros/tags" },
   ];
 
   return (
