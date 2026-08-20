@@ -721,6 +721,7 @@ export async function initializeDatabase() {
         ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS archived BOOLEAN DEFAULT false;
         ALTER TABLE public.cost_centers ADD COLUMN IF NOT EXISTS archived BOOLEAN DEFAULT false;
         ALTER TABLE public.cost_centers ADD COLUMN IF NOT EXISTS code TEXT;
+        ALTER TABLE public.cost_centers ADD COLUMN IF NOT EXISTS description TEXT;
         ALTER TABLE public.tags ADD COLUMN IF NOT EXISTS archived BOOLEAN DEFAULT false;
         ALTER TABLE public.tags ADD COLUMN IF NOT EXISTS color TEXT;
       `;

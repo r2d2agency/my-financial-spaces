@@ -656,17 +656,17 @@ export const dbQuery = createServerFn({ method: "POST" })
           return res.rows;
         }
         if (data.rpcName === "save_contact") {
-          const { id, workspace_id, name, document, phone, email, type } = data.rpcArgs;
+          const { id, workspace_id, name, document, phone, email, type, archived } = data.rpcArgs;
           await verifyAuth(workspace_id);
           if (id) {
              const res = await query(
-               "UPDATE public.contacts SET name=$1, document=$2, phone=$3, email=$4, type=$5 WHERE id=$6 AND workspace_id=$7 RETURNING *",
-               [name, document, phone, email, type, id, workspace_id]
+               "UPDATE public.contacts SET name=$1, document=$2, phone=$3, email=$4, kind=$5, archived=COALESCE($6, archived) WHERE id=$7 AND workspace_id=$8 RETURNING *",
+               [name, document, phone, email, type, archived !== undefined ? archived : null, id, workspace_id]
              );
              return res.rows[0];
           } else {
              const res = await query(
-               "INSERT INTO public.contacts (workspace_id, name, document, phone, email, type) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+               "INSERT INTO public.contacts (workspace_id, name, document, phone, email, kind) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
                [workspace_id, name, document, phone, email, type]
              );
              return res.rows[0];
@@ -679,18 +679,18 @@ export const dbQuery = createServerFn({ method: "POST" })
           return res.rows;
         }
         if (data.rpcName === "save_category") {
-          const { id, workspace_id, name, type } = data.rpcArgs;
+          const { id, workspace_id, name, type, color, archived } = data.rpcArgs;
           await verifyAuth(workspace_id);
           if (id) {
              const res = await query(
-               "UPDATE public.categories SET name=$1, kind=CAST($2 AS public.tx_type) WHERE id=$3 AND workspace_id=$4 RETURNING *",
-               [name, type, id, workspace_id]
+               "UPDATE public.categories SET name=$1, kind=CAST($2 AS public.tx_type), color=$3, archived=COALESCE($4, archived) WHERE id=$5 AND workspace_id=$6 RETURNING *",
+               [name, type, color, archived !== undefined ? archived : null, id, workspace_id]
              );
              return res.rows[0];
           } else {
              const res = await query(
-               "INSERT INTO public.categories (workspace_id, name, kind) VALUES ($1, $2, CAST($3 AS public.tx_type)) RETURNING *",
-               [workspace_id, name, type]
+               "INSERT INTO public.categories (workspace_id, name, kind, color) VALUES ($1, $2, CAST($3 AS public.tx_type), $4) RETURNING *",
+               [workspace_id, name, type, color]
              );
              return res.rows[0];
           }
